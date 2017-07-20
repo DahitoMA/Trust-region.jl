@@ -69,6 +69,7 @@ function TrustRegion(model, algo, filename::String=string("result", string(algo)
 	save(jldname,"x",x,"ite",ite,"fvalues",fvalues,"mvalues",mvalues)
 	X = load(jldname)
 	writedlm(txtname,X)
+	
   	@printf("%30s %s %9s %9s %9s %9s %3s %3s %4s %4s %4s %4s %4s\n","name", "nvar", "f(x*)", "/ f(x0)", "‖∇f(x*)‖", "/ ‖∇f(x0)‖", "#f", "#g", "#Hv", "#it", "s_it", "vs_it", "reject_it")
   	@printf("%30s %d  %8.1e  %8.1e    %7.1e  %7.1e     %d   %d   %d    %d    %d   %d     %d\n", model.meta.name, n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite),length(vs_ite), k-length(ite))
 	return x
