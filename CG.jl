@@ -4,9 +4,13 @@
 """A truncated version of the conjugate gradient method to solve the symmetric linear system Ax=b.
 A can be positive definite or not.
 """
-function CG(A, b, Δ::Float64=10., atol::Float64=1e-8, rtol::Float64=1e-6, verbose::Bool=false)
+function CG(A, b, Δ::Float64=10., atol::Float64=1e-8, rtol::Float64=1e-6, itmax::Int=0, verbose::Bool=false)
 
-  x = zeros(length(b)); # initial estimation x = 0
+  n = size(b, 1) # size of the problem
+  (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
+  verbose && @printf("CG: system of %d equations in %d variables\n", n, n)
+
+  x = zeros(n) # initial estimation x = 0
   xNorm = 0.0
   xNorms = [xNorm] # Values of ‖x‖
 	r = -b # initial residual r = Ax-b = -b
@@ -18,51 +22,47 @@ function CG(A, b, Δ::Float64=10., atol::Float64=1e-8, rtol::Float64=1e-6, verbo
 	qvalues = [q] # values of the quadratic model
 
   iter = 0
-	verbose && @printf("%5s %5s %14s %12s\n", "Iter", "‖x‖", "‖r‖", "q")
+  itmax == 0 && (itmax = 2* n)
+  verbose && @printf("%5s %6s %10s %10s %10s %10s\n", "Iter", "‖x‖", "‖r‖", "q", "α", "t1")
   verbose && @printf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, q)
 
-	while rNorm > ϵ # stopping criterion : ‖r‖ < = ϵ
+  solved = rNorm <= ϵ
+  tired = iter >= itmax
+  on_boundary = false
+
+  while ! (solved || tired)
     iter += 1
 		Ad = A * d
 		dAd = dot(d, Ad)
-		# solving ‖x+t1d‖²-Δ² = 0 with t1 >= 0
-		c = norm(d, 2)^2
-		a = dot(x, d)
-		f = norm(x, 2)^2 - Δ²
-		t = sqrt(a^2 - c * f)
+    α = rNorm^2 / dAd # step for x estimation
+    verbose && @printf("  %7.1e", α)
 
-		if a < 0.0
-			t1 = (-a + t) / c
-		else
-			t1 = f / (-a - t)
-		end
+    if Δ > 0.0
+  		# solving ‖x+t1d‖²-Δ² = 0 with t1 >= 0
+  		c = norm(d, 2)^2
+  		a = dot(x, d)
+  		f = norm(x, 2)^2 - Δ²
+  		t = sqrt(a^2 - c * f)
 
-		# convexity test along the direction d : if the model is not convexe,
-		#d is followed until the edge of the trust region
-		if dAd <= 0.0
-			x = x + t1 * d
-			xNorm = norm(x,2)
-      xNorms = push!(xNorms, xNorm)
-			q = dot(-b, x) + 1/2 * dot(x, A * x)
-			push!(qvalues, q)
-			rNorm = norm(A * x - b)
-			verbose && @printf("%d %8.1e %8.1e %8.1e\n", iter, xNorm, rNorm, q)
-			return x
-		end
+  		if a < 0.0
+  			t1 = (-a + t) / c
+  		else
+  			t1 = f / (-a - t)
+  		end
 
-		α = rNorm^2 / dAd # step for x estimation
-		# if x is out of the trust region, d is followed until the edge of the
-		#trust region
-		if α >= t1
-			x = x + t1 * d
-			xNorm = norm(x, 2)
-	    push!(xNorms, xNorm)
-			q = dot(-b, x) + 1/2 * dot(x, A * x)
-			push!(qvalues, q)
-			rNorm = norm(A * x - b)
-			verbose && @printf("%d %8.1e %8.1e %8.1e\n", iter, xNorm, rNorm, q)
-			return x
-		end
+      verbose && @printf("   %7.1e\n", t1);
+
+      #if the model is not convexe or x is out of the trust region,
+      #d is followed until the edge of the trust region
+      if (dAd <= 0.0) | (α >= t1)
+        α = t1
+        on_boundary = true
+      end
+
+    else
+      verbose && @printf("\n")
+
+    end
 
 		x = x + α * d # new estimation
 		xNorm = norm(x, 2)
@@ -73,10 +73,16 @@ function CG(A, b, Δ::Float64=10., atol::Float64=1e-8, rtol::Float64=1e-6, verbo
 		r = r + α * Ad # new residual
 		rNorm = norm(r, 2)
 
+    verbose && @printf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, q)
+    solved = (rNorm <= ϵ) | on_boundary
+    tired = iter >= itmax
+
+    (solved || tired) && continue
 		β = rNorm^2 / roldNorm^2 # step for the next descent direction
 		d = -r + β * d # new descent direction
-		verbose && @printf("%d %8.1e %8.1e %8.1e\n", iter, xNorm, rNorm, q)
 
 	end
+  verbose && @printf("\n")
+
 	return x
 end
