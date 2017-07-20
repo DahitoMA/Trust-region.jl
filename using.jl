@@ -13,5 +13,7 @@ include("minres.jl")
 include("TRCG.jl")
 include("TRCR.jl")
 include("TRminres.jl")
+include("TrustRegion.jl")
+include("CRtrunc.jl")
 
 using Krylov

@@ -47,8 +47,6 @@ function CRtrunc(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e
       t2 = (-a - t) / c
     end
 
-    # convexity test along the direction p : if the model is not convexe,
-		#p is followed until the edge of the trust region
     pAp = dot(p, q)
 
     α = ρ / dot(q, q) # step
@@ -56,8 +54,8 @@ function CRtrunc(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e
     verbose && @printf("  %7.1e   %7.1e   %7.1e\n", α, t1, t2);
 
 
-    # if x is out of the trust region, p is followed until the edge of the
-		# trust region
+    # if x is out of the trust region or if the model is not convex, p is followed
+    # until the edge of the trust region
 		if (α >= t1) | (pAp <= 0.0) | (abs(α) < ϵ)
       α = t1
       on_boundary = true
