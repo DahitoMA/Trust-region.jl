@@ -22,6 +22,8 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
   m = 0.0
   mvalues = [m] # values of the quadratic model
   ϵ = atol + rtol * rNorm
+  γ = rNorm * rNorm
+  pAp = ρ
 
   iter = 0
   itmax == 0 && (itmax = 2* n)
@@ -54,15 +56,18 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
       verbose && @printf("   %7.1e   %7.1e\n", t1, t2)
 
-      pAp = dot(p, q)
-      pb = dot(p, b)
-
-      # if x is out of the trust region or if the model is not convex, p is followed
-      # until the edge of the trust region
-      if (pb <= 0.0) | (α <= t2)
+      if pAp == 0.0
+        if (ρ == 0.0) | (γ > 0)
+          α = t1
+          on_boundary = true
+        elseif γ < 0.0
+          α = t2
+          on_boundary = true
+        end
+      elseif (γ < 0.0) | (α < 0.0)
         α = t2
         on_boundary = true
-      elseif (pAp <= 0.0) | (α >= t1)
+      elseif (pAp < 0.0) | (α > t1)
         α = t1
         on_boundary = true
       end
@@ -86,12 +91,22 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     tired = iter >= itmax
 
     (solved || tired) && continue
+    oldpAp = pAp
     s = A * r
     ρbar = ρ
     ρ = dot(r, s)
     β = ρ / ρbar # step for the direction calculus
     p = r + β * p # descent direction
     q = s + β * q
+
+    pAp = dot(p, q)
+    γ = rNorm * rNorm + β * γ - β * α * oldpAp # p'r
+
+    if (γ < 0.0) & (pAp > 0.0)
+      solved = true
+    elseif γ == 0.0
+      solved = true
+    end
 
   end
   verbose && @printf("\n")
