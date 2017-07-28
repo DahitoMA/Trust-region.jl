@@ -30,6 +30,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
   verbose && @printf("%5s %6s %10s %10s %10s %10s\n", "Iter", "‖x‖", "‖r‖", "q", "α", "t1")
   verbose && @printf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, m)
 
+  descent = γ > 0.0 # p'r > 0 means p is a descent direction
   solved = rNorm <= ϵ
   tired = iter >= itmax
   on_boundary = false
@@ -56,19 +57,19 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
       verbose && @printf("   %7.1e   %7.1e\n", t1, t2)
 
-      if pAp == 0.0
-        if (ρ == 0.0) | (γ > 0)
-          α = t1
+      if pAp == 0.0 # p'q = 0
+        if (ρ == 0.0) | (descent)
+          α = t1 # > 0
           on_boundary = true
-        elseif γ < 0.0
-          α = t2
+        elseif !descent
+          α = t2 # < 0
           on_boundary = true
         end
-      elseif (γ < 0.0) | (α < 0.0)
-        α = t2
+      elseif (!descent) | (α < t2)
+        α = t2 # < 0
         on_boundary = true
       elseif (pAp < 0.0) | (α > t1)
-        α = t1
+        α = t1 # > 0
         on_boundary = true
       end
 
@@ -101,11 +102,12 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
     pAp = dot(p, q)
     γ = rNorm * rNorm + β * γ - β * α * oldpAp # p'r
+    descent = γ > 0.0
 
-    if (γ < 0.0) & (pAp > 0.0)
+    if γ == 0.0 # p'r = 0
       solved = true
-    elseif γ == 0.0
-      solved = true
+    elseif (!descent) & (pAp > 0.0) # p rise direction of positive curvature
+      p = - p
     end
 
   end
