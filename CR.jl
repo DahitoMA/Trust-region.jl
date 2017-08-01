@@ -4,7 +4,7 @@
 
 """A truncated version of Stiefel’s Conjugate Residual method to solve the symmetric linear system Ax=b.
 """
-function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, itmax::Int=0, verbose::Bool=false)
+function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, itmax::Int=0, verbose::Bool=true)
   n = size(b, 1) # size of the problem
   (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
   verbose && @printf("CR: system of %d equations in %d variables\n", n, n)
@@ -17,12 +17,14 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
   s = A * r
   ρ = dot(r, s)
   p = r
+  P = [zeros(n), p] # [0, p_0]
   q = s
+  Q = [zeros(n), q] # [0, q_0]
   Δ² = Δ^2
   m = 0.0
   mvalues = [m] # values of the quadratic model
   ϵ = atol + rtol * rNorm
-  γ = rNorm * rNorm
+  pr = rNorm * rNorm
   pAp = ρ
 
   iter = 0
@@ -30,15 +32,21 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
   verbose && @printf("%5s %6s %10s %10s %10s %10s\n", "Iter", "‖x‖", "‖r‖", "q", "α", "t1")
   verbose && @printf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, m)
 
-  descent = γ > 0.0 # p'r > 0 means p is a descent direction
+  descent = pr > 0.0 # p'r > 0 means p is a descent direction
   solved = rNorm <= ϵ
   tired = iter >= itmax
   on_boundary = false
 
   while ! (solved || tired)
     iter += 1
-    α = ρ / dot(q, q) # step
+    qNorm² = dot(q, q)
+    α = ρ / qNorm² # step
     verbose && @printf("  %7.1e", α)
+
+    if iter >= 2
+      Q = [Q[2], q] # [q_{k-2}, q_{k-1}]
+      P = [P[2], p] # [p_{k-2}, p_{k-1}]
+    end
 
     if Δ > 0.0
       # solving ‖x+ti*p‖²-Δ² = 0 with i=1,2
@@ -78,6 +86,17 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
     end
 
+    if α <= 1.e-15
+      γ = dot(s, A *  q) / qNorm²
+      δ = dot(s, A * Q[1]) / dot(Q[1], Q[1])
+      p = s - γ * p - δ * P[1]
+      q = A * p
+      α = dot(r, q) / dot(q, q)
+      pAp = dot(p, q)
+      pr = dot(p, r - α * q)
+      descent = pr > 0.0
+    end
+
     x = x + α * p # new estimation
     xNorm = norm(x, 2)
     push!(xNorms, xNorm)
@@ -101,13 +120,14 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     q = s + β * q
 
     pAp = dot(p, q)
-    γ = rNorm * rNorm + β * γ - β * α * oldpAp # p'r
-    descent = γ > 0.0
+    pr = rNorm * rNorm + β * pr - β * α * oldpAp # p'r
+    descent = pr > 0.0
 
-    if γ == 0.0 # p'r = 0
+    if pr == 0.0 # p'r = 0
       solved = true
     elseif (!descent) & (pAp > 0.0) # p rise direction of positive curvature
       p = - p
+      descent = true
     end
 
   end
