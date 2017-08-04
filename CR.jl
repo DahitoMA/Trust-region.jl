@@ -29,7 +29,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
   iter = 0
   itmax == 0 && (itmax = 2* n)
-  verbose && @printf("%5s %6s %10s %10s %10s %10s\n", "Iter", "‖x‖", "‖r‖", "q", "α", "t1")
+  verbose && @printf("%5s %6s %10s %10s %10s %10s %10s\n", "Iter", "‖x‖", "‖r‖", "q", "α", "t1", "t2")
   verbose && @printf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, m)
 
   descent = pr > 0.0 # p'r > 0 means p is a descent direction
@@ -63,6 +63,25 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         t2 = (-a - t) / c
       end
 
+      if α <= eps(Float64) # 1.e-15
+        γ = dot(s, A *  q) / qNorm²
+        δ = dot(s, A * Q[1]) / dot(Q[1], Q[1])
+        p = s - γ * p - δ * P[1]
+        q = A * p
+        α = dot(r, q) / dot(q, q)
+        pAp = dot(p, q)
+        pr = dot(p, r - α * q)
+        descent = pr > 0.0
+      end
+
+      if abs(pr) < eps(Float64) # pr == 0.0 # p'r = 0
+        solved = true
+        continue
+      elseif (!descent) & (pAp > 0.0) # p rise direction of positive curvature
+        p = - p
+        descent = true
+      end
+
       verbose && @printf("   %7.1e   %7.1e\n", t1, t2)
 
       if pAp == 0.0 # p'q = 0
@@ -84,17 +103,6 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     else
       verbose && @printf("\n")
 
-    end
-
-    if α <= 1.e-15
-      γ = dot(s, A *  q) / qNorm²
-      δ = dot(s, A * Q[1]) / dot(Q[1], Q[1])
-      p = s - γ * p - δ * P[1]
-      q = A * p
-      α = dot(r, q) / dot(q, q)
-      pAp = dot(p, q)
-      pr = dot(p, r - α * q)
-      descent = pr > 0.0
     end
 
     x = x + α * p # new estimation
@@ -122,13 +130,6 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     pAp = dot(p, q)
     pr = rNorm * rNorm + β * pr - β * α * oldpAp # p'r
     descent = pr > 0.0
-
-    if pr == 0.0 # p'r = 0
-      solved = true
-    elseif (!descent) & (pAp > 0.0) # p rise direction of positive curvature
-      p = - p
-      descent = true
-    end
 
   end
   verbose && @printf("\n")
