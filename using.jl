@@ -10,9 +10,6 @@ using BenchmarkProfiles
 include("CG.jl")
 include("CR.jl")
 include("minres.jl")
-include("TRCG.jl")
-include("TRCR.jl")
-include("TRminres.jl")
 include("TrustRegion.jl")
 include("CRtrunc.jl")
 
