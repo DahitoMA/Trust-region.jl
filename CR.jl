@@ -1,5 +1,5 @@
 # A truncated version of Stiefel’s Conjugate Residual method
-# cr(A, b, Δ, atol, rtol, verbose) solves the linear system 'A * x = b' or the least-squares problem :
+# CR(A, b, Δ, atol, rtol, itmax, verbose) solves the linear system 'A * x = b' or the least-squares problem :
 # 'min ‖b - A * x‖²' within a region of fixed radius Δ.
 
 """A truncated version of Stiefel’s Conjugate Residual method to solve the symmetric linear system Ax=b.
@@ -14,21 +14,23 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
   xNorms = [xNorm] # Values of ‖x‖
   r = b # initial residual r = b - Ax = b
   rNorm = norm(r, 2) # ‖r‖
+  rNorm² = rNorm * rNorm
   s = A * r
   ρ = dot(r, s)
+  absρ = abs(ρ)
   p = r
-  P = [zeros(n), p] # [0, p_0]
   q = s
-  Q = [zeros(n), q] # [0, q_0]
   Δ² = Δ^2
   m = 0.0
   mvalues = [m] # values of the quadratic model
   ϵ = atol + rtol * rNorm
-  pr = rNorm * rNorm
+  pr = rNorm²
+  abspr = pr
   pAp = ρ
+  abspAp = abs(pAp)
 
   iter = 0
-  itmax == 0 && (itmax = 2* n)
+  itmax == 0 && (itmax = 2 * n)
   verbose && @printf("%5s %6s %10s %10s %10s %10s %10s\n", "Iter", "‖x‖", "‖r‖", "q", "α", "t1", "t2")
   verbose && @printf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, m)
 
@@ -39,14 +41,8 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
   while ! (solved || tired)
     iter += 1
-    qNorm² = dot(q, q)
-    α = ρ / qNorm² # step
+    α = ρ / dot(q, q) # step
     verbose && @printf("  %7.1e", α)
-
-    if iter >= 2
-      Q = [Q[2], q] # [q_{k-2}, q_{k-1}]
-      P = [P[2], p] # [p_{k-2}, p_{k-1}]
-    end
 
     if Δ > 0.0
       # solving ‖x+ti*p‖²-Δ² = 0 with i=1,2
@@ -63,39 +59,45 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         t2 = (-a - t) / c
       end
 
-      if α <= eps(Float64) # 1.e-15
-        γ = dot(s, A *  q) / qNorm²
-        δ = dot(s, A * Q[1]) / dot(Q[1], Q[1])
-        p = s - γ * p - δ * P[1]
-        q = A * p
-        α = dot(r, q) / dot(q, q)
-        pAp = dot(p, q)
-        pr = dot(p, r - α * q)
-        descent = pr > 0.0
-      end
+      verbose && @printf("   %7.1e   %7.1e\n", t1, t2)
 
-      if abs(pr) < eps(Float64) # pr == 0.0 # p'r = 0
-        solved = true
-        continue
-      elseif (!descent) & (pAp > 0.0) # p rise direction of positive curvature
-        p = - p
+      if pr == 0.0
+        p = r # - ∇q(x)
+        pAp = dot(p, q)
+        abspAp = abs(pAp)
+        pr = rNorm²
+        abspr = pr
         descent = true
       end
 
-      verbose && @printf("   %7.1e   %7.1e\n", t1, t2)
+      if abspAp < sqrt(ϵ) * abspAp # p'q = 0
 
-      if pAp == 0.0 # p'q = 0
-        if (ρ == 0.0) | (descent)
+        if (absρ < sqrt(ϵ) * absρ) | (descent) # ρ = 0 or descent = true
           α = t1 # > 0
           on_boundary = true
-        elseif !descent
+        elseif !descent # descent = false
           α = t2 # < 0
           on_boundary = true
         end
-      elseif (!descent) | (α < t2)
+
+      elseif pAp < 0.0 # negative curvature
+        α = t1 # > 0
+        on_boundary = true
+      elseif (!descent) & (α > 0)
+        p = - p
+        pr = - pr
+        abspr = pr
+        descent = true
+
+        if α >= t1
+          α = t1 # > 0
+          on_boundary = true
+        end
+
+      elseif (!descent) | (α <= t2)
         α = t2 # < 0
         on_boundary = true
-      elseif (pAp < 0.0) | (α > t1)
+      elseif α >= t1
         α = t1 # > 0
         on_boundary = true
       end
@@ -123,12 +125,16 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     s = A * r
     ρbar = ρ
     ρ = dot(r, s)
+    absρ = abs(ρ)
     β = ρ / ρbar # step for the direction calculus
-    p = r + β * p # descent direction
+    p = r + β * p # search direction
     q = s + β * q
 
     pAp = dot(p, q)
-    pr = rNorm * rNorm + β * pr - β * α * oldpAp # p'r
+    abspAp = abs(pAp)
+    rNorm² = rNorm * rNorm
+    pr = rNorm² + β * pr - β * α * oldpAp # p'r
+    abspr = abs(pr)
     descent = pr > 0.0
 
   end
