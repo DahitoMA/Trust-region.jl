@@ -61,7 +61,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
       verbose && @printf("   %7.1e   %7.1e\n", t1, t2)
 
-      if pr == 0.0
+      if abspr < sqrt(ϵ) * abspr # pr = 0
         p = r # - ∇q(x)
         pAp = dot(p, q)
         abspAp = abs(pAp)
