@@ -27,7 +27,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
   pr = rNorm²
   abspr = pr
   pAp = ρ
-  abspAp = abs(pAp)
+  abspAp = absρ
 
   iter = 0
   itmax == 0 && (itmax = 2 * n)
@@ -46,22 +46,13 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
     if Δ > 0.0
       # solving ‖x+ti*p‖²-Δ² = 0 with i=1,2
-      c = dot(p, p)
-      a = dot(x, p)
-      f = xNorm^2 - Δ²
-      t = sqrt(a^2 - c * f)
-
-      if a < 0.0
-        t1 = (-a + t) / c
-        t2 = f / (-a + t)
-      else
-        t1 = f / (-a - t)
-        t2 = (-a - t) / c
-      end
+      xNorm² = xNorm^2
+      t1 = to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
+      t2 = - to_boundary(x, p, Δ; flip = true, xNorm2 = xNorm²)
 
       verbose && @printf("   %7.1e   %7.1e\n", t1, t2)
 
-      if abspr < sqrt(ϵ) * abspr # pr = 0
+      if abspr <= ϵ # pr = 0
         p = r # - ∇q(x)
         pAp = dot(p, q)
         abspAp = abs(pAp)
@@ -70,9 +61,9 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         descent = true
       end
 
-      if abspAp < sqrt(ϵ) * abspAp # p'q = 0
+      if abspAp <= ϵ # p'q = 0
 
-        if (absρ < sqrt(ϵ) * absρ) | (descent) # ρ = 0 or descent = true
+        if (absρ <= ϵ) | (descent) # ρ = 0 or descent = true
           α = t1 # > 0
           on_boundary = true
         elseif !descent # descent = false
@@ -111,7 +102,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     xNorm = norm(x, 2)
     push!(xNorms, xNorm)
     Ax = A * x
-    m = dot(-b, x) + 0.5 * dot(x, Ax)
+    m = - dot(b, x) + 0.5 * dot(x, Ax)
     push!(mvalues, m)
     r = r - α * q # residual
     rNorm = norm(r, 2) # ‖r‖
