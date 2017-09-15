@@ -72,8 +72,11 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         end
 
       elseif pAp < 0.0 # negative curvature
-        α = t1 # > 0
-        on_boundary = true
+          if descent
+              α = t1 # > 0
+          else α = t2 # < 0
+          end
+          on_boundary = true
       elseif (!descent) & (α > 0)
         p = - p
         pr = - pr
