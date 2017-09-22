@@ -1,3 +1,5 @@
+import Krylov
+
 # A truncated version of Stiefel’s Conjugate Residual method
 # CR(A, b, Δ, atol, rtol, itmax, verbose) solves the linear system 'A * x = b' or the least-squares problem :
 # 'min ‖b - A * x‖²' within a region of fixed radius Δ.
@@ -47,8 +49,9 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     if Δ > 0.0
       # solving ‖x+ti*p‖²-Δ² = 0 with i=1,2
       xNorm² = xNorm^2
-      t1 = to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
-      t2 = - to_boundary(x, p, Δ; flip = true, xNorm2 = xNorm²)
+      t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
+      t1 = maximum(t)
+      t2 = minimum(t)
 
       verbose && @printf("   %7.1e   %7.1e\n", t1, t2)
 
@@ -61,12 +64,12 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         descent = true
       end
 
-      if abspAp <= ϵ # p'q = 0
+      if (abspAp <= ϵ) | (absρ <= ϵ) # p'q = 0 or ρ = 0
 
-        if (absρ <= ϵ) | (descent) # ρ = 0 or descent = true
+        if descent # descent = true
           α = t1 # > 0
           on_boundary = true
-        elseif !descent # descent = false
+        else # descent = false
           α = t2 # < 0
           on_boundary = true
         end
@@ -83,8 +86,8 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         abspr = pr
         descent = true
 
-        if α >= t1
-          α = t1 # > 0
+        if α >= - t2 # positive root of ‖x-t*p‖²-Δ²
+          α = - t2 # > 0
           on_boundary = true
         end
 
