@@ -41,6 +41,10 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     tired = iter >= itmax
     on_boundary = false
 
+    logger = get_logger() # get root logger
+    # basic configuration. The root logger level is then INFO
+    basic_config(MiniLogging.INFO; date_format="%Y-%m-%d %H:%M:%S")
+
     while ! (solved || tired)
         iter += 1
         α = ρ / dot(q, q) # step
@@ -56,6 +60,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
             verbose && @printf("   %7.1e   %7.1e\n", t1, t2)
 
             if abspr <= ϵ # pr = 0
+                @info(logger, "p'r ≃ 0")
                 p = r # - ∇q(x)
                 pAp = dot(p, q)
                 abspAp = abs(pAp)
@@ -65,6 +70,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
             end
 
             if (abspAp <= ϵ) | (absρ <= ϵ) # p'q = 0 or ρ = 0
+                @info(logger, "p'Ap ≃ 0 or |ρ| ≃ 0")
 
                 if descent # descent = true
                     α = t1 # > 0
@@ -75,12 +81,14 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
                 end
 
             elseif pAp < 0.0 # negative curvature
+                @info(logger, "p'Ap < 0")
                 if descent
                     α = t1 # > 0
                 else α = t2 # < 0
                 end
                 on_boundary = true
             elseif (!descent) & (α > 0)
+                @info(logger, "p'Ap > 0, p is a rise direction and α > 0")
                 p = - p
                 pr = - pr # > 0
                 abspr = pr
@@ -92,9 +100,11 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
                 end
 
             elseif (!descent) | (α <= t2)
+                @info(logger, "p'Ap > 0 but p is a rise direction or α ≤ t2")
                 α = t2 # < 0
                 on_boundary = true
             elseif α >= t1
+                @info(logger, "p'Ap > 0, p is a descent direction and α ≥ t1")
                 α = t1 # > 0
                 on_boundary = true
             end
