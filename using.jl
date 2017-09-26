@@ -6,6 +6,7 @@ using LinearOperators
 using PyPlot # graph
 using BenchmarkTools
 using BenchmarkProfiles
+using MiniLogging
 
 include("CG.jl")
 include("CR.jl")
