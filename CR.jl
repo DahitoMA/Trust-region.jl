@@ -6,10 +6,10 @@ import Krylov
 
 """A truncated version of Stiefel’s Conjugate Residual method to solve the symmetric linear system Ax=b.
 """
-function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, itmax::Int=0, verbose::Bool=true)
+function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, itmax::Int=0) #, verbose::Bool=true)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
-    verbose && @printf("CR: system of %d equations in %d variables\n", n, n)
+    @info(logger, @sprintf("CR: system of %d equations in %d variables", n, n))
 
     x = zeros(n) # initial estimation x = 0
     xNorm = 0.0
@@ -33,22 +33,18 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
     iter = 0
     itmax == 0 && (itmax = 2 * n)
-    verbose && @printf("%5s %6s %10s %10s %10s %10s %10s\n", "Iter", "‖x‖", "‖r‖", "q", "α", "t1", "t2")
-    verbose && @printf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, m)
+    @info(logger, @sprintf("%5s %6s %10s %10s %10s %10s %10s", "Iter", "‖x‖", "‖r‖", "q", "α", "t1", "t2"))
 
     descent = pr > 0.0 # p'r > 0 means p is a descent direction
     solved = rNorm <= ϵ
     tired = iter >= itmax
     on_boundary = false
 
-    logger = get_logger() # get root logger
-    # basic configuration. The root logger level is then INFO
-    basic_config(MiniLogging.INFO; date_format="%Y-%m-%d %H:%M:%S")
-
     while ! (solved || tired)
+        info_line = @sprintf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, m)
         iter += 1
         α = ρ / dot(q, q) # step
-        verbose && @printf("  %7.1e", α)
+        info_line *= @sprintf("  %7.1e", α)
 
         if Δ > 0.0
             # solving ‖x+ti*p‖²-Δ² = 0 with i=1,2
@@ -57,10 +53,10 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
             t1 = maximum(t)
             t2 = minimum(t)
 
-            verbose && @printf("   %7.1e   %7.1e\n", t1, t2)
+            info_line *= @sprintf("   %7.1e   %7.1e", t1, t2)
 
             if abspr <= ϵ # pr = 0
-                @info(logger, "p'r ≃ 0")
+                @debug(logger, "p'r ≃ 0")
                 p = r # - ∇q(x)
                 pAp = dot(p, q)
                 abspAp = abs(pAp)
@@ -70,7 +66,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
             end
 
             if (abspAp <= ϵ) | (absρ <= ϵ) # p'q = 0 or ρ = 0
-                @info(logger, "p'Ap ≃ 0 or |ρ| ≃ 0")
+                @debug(logger, "p'Ap ≃ 0 or |ρ| ≃ 0")
 
                 if descent # descent = true
                     α = t1 # > 0
@@ -81,14 +77,15 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
                 end
 
             elseif pAp < 0.0 # negative curvature
-                @info(logger, "p'Ap < 0")
+                @debug(logger, "p'Ap < 0")
+                # @printf("p'Ap < 0")
                 if descent
                     α = t1 # > 0
                 else α = t2 # < 0
                 end
                 on_boundary = true
             elseif (!descent) & (α > 0)
-                @info(logger, "p'Ap > 0, p is a rise direction and α > 0")
+                @debug(logger, "p'Ap > 0, p is a rise direction and α > 0")
                 p = - p
                 pr = - pr # > 0
                 abspr = pr
@@ -100,17 +97,17 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
                 end
 
             elseif (!descent) | (α <= t2)
-                @info(logger, "p'Ap > 0 but p is a rise direction or α ≤ t2")
+                @debug(logger, "p'Ap > 0 but p is a rise direction or α ≤ t2")
                 α = t2 # < 0
                 on_boundary = true
             elseif α >= t1
-                @info(logger, "p'Ap > 0, p is a descent direction and α ≥ t1")
+                @debug(logger, "p'Ap > 0, p is a descent direction and α ≥ t1")
                 α = t1 # > 0
                 on_boundary = true
             end
 
-        else
-            verbose && @printf("\n")
+        # else
+        #     verbose && @printf("\n")
 
         end
 
@@ -123,8 +120,14 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         r = r - α * q # residual
         rNorm = norm(r, 2) # ‖r‖
 
-        verbose && @printf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, m)
+        info_line *= @sprintf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, m)
+        @info(logger, info_line)
+
         solved = (rNorm <= ϵ) | on_boundary
+        @debug(logger, @sprintf("solved = %s", solved))
+        # @printf("solved = %s", solved)
+        @debug(logger,@sprintf("on_boundary = %s", on_boundary))
+        # @printf("on_boundary = %s", on_boundary)
         tired = iter >= itmax
 
         (solved || tired) && continue
@@ -145,7 +148,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         descent = pr > 0.0
 
     end
-    verbose && @printf("\n")
+    # verbose && @printf("\n")
 
     return x
 end
