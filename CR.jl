@@ -33,7 +33,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
     iter = 0
     itmax == 0 && (itmax = 2 * n)
-    @info(logger, @sprintf("%5s %6s %10s %10s %10s %10s %10s", "Iter", "‖x‖", "‖r‖", "q", "α", "t1", "t2"))
+    @info(logger, @sprintf("%5s %7s %7s %8s %8s %8s %8s %8s", "Iter", "‖x‖", "‖r‖", "q", "p'r", "α", "t1", "t2"))
 
     descent = pr > 0  # p'r > 0 means p is a descent direction
     solved = rNorm <= ϵ
@@ -41,10 +41,9 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     on_boundary = false
 
     while ! (solved || tired)
-        info_line = @sprintf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, m)
+        info_line = @sprintf("%5d %7.1e %7.1e %8.1e %8.1e", iter, xNorm, rNorm, m, pr)
         iter += 1
         α = ρ / dot(q, q) # step
-        info_line *= @sprintf("  %7.1e", α)
 
         if pAp ≤ 0 && Δ == 0
             @critical(logger, "indefinite system and no trust region")
@@ -59,7 +58,9 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
             t1 = maximum(t)
             t2 = minimum(t)
 
-            info_line *= @sprintf("   %7.1e   %7.1e", t1, t2)
+            # pour debugger
+            @assert t1 > 0
+            @assert t2 < 0
 
             if pAp ≤ 0
                 @debug(logger, @sprintf("nonpositive curvature: pAp = %8.1", pAp))
@@ -109,8 +110,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
             end
 
-        # else
-        #     verbose && @printf("\n")
+            info_line *= @sprintf(" %8.1e %8.1e %8.1e", α, t1, t2)
 
         end
 
@@ -123,17 +123,14 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         r = r - α * q # residual
         rNorm = norm(r, 2) # ‖r‖
 
-        info_line *= @sprintf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, m)
         @info(logger, info_line)
 
         solved = (rNorm <= ϵ) | on_boundary
         @debug(logger, @sprintf("solved = %s", solved))
-        # @printf("solved = %s", solved)
         @debug(logger,@sprintf("on_boundary = %s", on_boundary))
-        # @printf("on_boundary = %s", on_boundary)
         tired = iter >= itmax
-
         (solved || tired) && continue
+
         oldpAp = pAp
         s = A * r
         ρbar = ρ
