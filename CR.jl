@@ -114,14 +114,14 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
         end
 
-        x = x + α * p # new estimation
+        x = x + α * p
         xNorm = norm(x, 2)
         push!(xNorms, xNorm)
         Ax = A * x
-        m = - dot(b, x) + 0.5 * dot(x, Ax)
+        m = -dot(b, x) + 0.5 * dot(x, Ax)
         push!(mvalues, m)
-        r = r - α * q # residual
-        rNorm = norm(r, 2) # ‖r‖
+        r = r - α * q  # residual
+        rNorm = norm(r)
 
         @info(logger, info_line)
 
