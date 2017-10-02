@@ -36,7 +36,7 @@ function TrustRegion(model, algo; filename::String=string("result", string(algo)
 		Δf = fxtrial - fx # f(x_k + s) - f(x_k)
 
 		Hs = H * s
-    		Δm = dot(g,s) + 0.5 * dot(s,Hs) # m_k(x_k + s) - m_k(x_k)
+		Δm = dot(g,s) + 0.5 * dot(s,Hs) # m_k(x_k + s) - m_k(x_k)
 
 		# ratio ρ
 		ρ = Δf / Δm
