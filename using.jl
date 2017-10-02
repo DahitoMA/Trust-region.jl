@@ -2,7 +2,7 @@
 # using JLD # save variables
 using OptimizationProblems
 using NLPModels
-using LinearOperators
+# using LinearOperators
 # using PyPlot # graph
 # using BenchmarkTools
 # using BenchmarkProfiles
