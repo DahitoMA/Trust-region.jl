@@ -96,13 +96,9 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
                 end
 
-            elseif α ≤ t2  # (!descent) | (α <= t2)
-                @debug(logger, @sprintf("pAp = %8.1e > 0 but α = %8.1e ≤ t2 = %8.1e", pAp, α, t2))
-
-                α = t2  # < 0
-                on_boundary = true
-
             elseif α ≥ t1
+                # at this point, it is not possible that α < 0 because pAp > 0
+                # (cf. Fong and Saunders)
                 @debug(logger, @sprintf("pAp = %8.1e > 0 but α = %8.1e ≥ t1 = %8.1e", pAp, α, t1))
 
                 α = t1  # > 0
