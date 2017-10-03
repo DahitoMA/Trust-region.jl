@@ -141,8 +141,6 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         @info(logger, info_line)
 
         solved = (rNorm <= ϵ) | on_boundary
-        @debug(logger, @sprintf("solved = %s", solved))
-        @debug(logger,@sprintf("on_boundary = %s", on_boundary))
         tired = iter >= itmax
         (solved || tired) && continue
 
@@ -163,7 +161,6 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         descent = pr > 0.0
 
     end
-    # verbose && @printf("\n")
 
     return x
 end
