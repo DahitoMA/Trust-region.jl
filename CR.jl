@@ -67,10 +67,15 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
                 # according to Fong and Saunders, p'r = 0 can only happen if pAp ≤ 0
                 if abspr <= eps() * norm(p) * rNorm
-                    @debug(logger, @sprintf("p'r = %8.1e ≃ 0", pr))
+                    @debug(logger, @sprintf("p'r = %8.1e ≃ 0, redefining p := r", pr))
 
                     p = r # - ∇q(x)
-                    pAp = dot(p, q)
+                    # q(x + αr) = q(x) - α ‖r‖² + ½ α² r'Ar
+                    # 1) if rAr > 0, q decreases from α = 0 to α = ‖r‖² / r'Ar
+                    # 2) if rAr ≤ 0, q decreases to -∞ in the direction r
+
+                    q = s # = Ar = Ap
+                    pAp = ρ # = dot(p, q) = pAp = rAr
                     abspAp = abs(pAp)
                     pr = abspr = rNorm²
                     descent = true
@@ -78,15 +83,29 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
                     # TODO: find a way to not recompute t1 and t2
                     t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
                     t1 = maximum(t)
-                    t2 = minimum(t)
+                    # t2 = minimum(t)
 
-                    @assert t1 > 0
-                    @assert t2 < 0
+                    # @assert t1 > 0
+                    # @assert t2 < 0
 
-                    # TODO: continue normally if α < t1?
-                    if α ≥ t1
+                    if ρ > 0  # case 1
+                        @debug(logger,
+                               @sprintf("quadratic is convex in direction r, curv = %7.1e", ρ))
+
+                        α = rNorm² / ρ
+
+                        if α ≥ t1
+                            α = t1
+                            on_boundary = true
+                        end
+
+                    else  # case 2
+                        @debug(logger,
+                               @sprintf("r is a direction of nonpositive curvature: %8.1e", ρ))
+
                         α = t1
                         on_boundary = true
+
                     end
 
                 else
