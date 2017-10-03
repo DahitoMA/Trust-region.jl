@@ -63,7 +63,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
             @assert t2 < 0
 
             if pAp ≤ 0
-                @debug(logger, @sprintf("nonpositive curvature: pAp = %8.1", pAp))
+                @debug(logger, @sprintf("nonpositive curvature: pAp = %8.1e", pAp))
 
                 # according to Fong and Saunders, p'r = 0 can only happen if pAp ≤ 0
                 if abspr <= eps() * norm(p) * rNorm
