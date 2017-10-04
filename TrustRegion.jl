@@ -5,7 +5,7 @@
 
 """An implementation of the trust-region method
 """
-function TrustRegion(model, algo, filename::String=string("result", string(algo)), Δ::Float64=10., ϵa::Float64=1e-6, ϵr::Float64=1e-6, itemax::Int=10000, verbose::Bool=false)
+function TrustRegion(model, algo; filename::String=string("result", string(algo)), Δ::Float64=10., ϵa::Float64=1e-6, ϵr::Float64=1e-6, itemax::Int=10000, verbose::Bool=false)
 
 	x = model.meta.x0 # initial estimation from the model
 	n = model.meta.nvar # size of the problem
@@ -36,7 +36,7 @@ function TrustRegion(model, algo, filename::String=string("result", string(algo)
 		Δf = fxtrial - fx # f(x_k + s) - f(x_k)
 
 		Hs = H * s
-    		Δm = dot(g,s) + 0.5 * dot(s,Hs) # m_k(x_k + s) - m_k(x_k)
+		Δm = dot(g,s) + 0.5 * dot(s,Hs) # m_k(x_k + s) - m_k(x_k)
 
 		# ratio ρ
 		ρ = Δf / Δm

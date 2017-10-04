@@ -33,104 +33,117 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
     iter = 0
     itmax == 0 && (itmax = 2 * n)
-    @info(logger, @sprintf("%5s %6s %10s %10s %10s %10s %10s", "Iter", "‖x‖", "‖r‖", "q", "α", "t1", "t2"))
+    @info(logger, @sprintf("%5s %7s %7s %8s %8s %8s %8s %8s", "Iter", "‖x‖", "‖r‖", "q", "p'r", "α", "t1", "t2"))
 
-    descent = pr > 0.0 # p'r > 0 means p is a descent direction
+    descent = pr > 0  # p'r > 0 means p is a descent direction
     solved = rNorm <= ϵ
     tired = iter >= itmax
     on_boundary = false
 
     while ! (solved || tired)
-        info_line = @sprintf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, m)
+        info_line = @sprintf("%5d %7.1e %7.1e %8.1e %8.1e", iter, xNorm, rNorm, m, pr)
         iter += 1
         α = ρ / dot(q, q) # step
-        info_line *= @sprintf("  %7.1e", α)
 
-        if Δ > 0.0
-            # solving ‖x+ti*p‖²-Δ² = 0 with i=1,2
+        if pAp ≤ 0 && Δ == 0
+            @critical(logger, "indefinite system and no trust region")
+            return x, p
+        end
+
+        if Δ > 0
+
+            # find t1 > 0 and t2 < 0 such that ‖x + ti * p‖² = Δ²  (i = 1, 2)
             xNorm² = xNorm^2
             t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
             t1 = maximum(t)
             t2 = minimum(t)
 
-            info_line *= @sprintf("   %7.1e   %7.1e", t1, t2)
+            # pour debugger
+            @assert t1 > 0
+            @assert t2 < 0
 
-            if abspr <= ϵ # pr = 0
-                @debug(logger, "p'r ≃ 0")
-                p = r # - ∇q(x)
-                pAp = dot(p, q)
-                abspAp = abs(pAp)
-                pr = rNorm²
-                abspr = pr
-                descent = true
+            if pAp ≤ 0
+                @debug(logger, @sprintf("nonpositive curvature: pAp = %8.1e", pAp))
+
+                # according to Fong and Saunders, p'r = 0 can only happen if pAp ≤ 0
+                if abspr <= eps() * norm(p) * rNorm
+                    @debug(logger, @sprintf("p'r = %8.1e ≃ 0, redefining p := r", pr))
+
+                    p = r # - ∇q(x)
+                    # q(x + αr) = q(x) - α ‖r‖² + ½ α² r'Ar
+                    # 1) if rAr > 0, q decreases from α = 0 to α = ‖r‖² / r'Ar
+                    # 2) if rAr ≤ 0, q decreases to -∞ in the direction r
+
+                    q = s # = Ar = Ap
+                    pAp = ρ # = dot(p, q) = pAp = rAr
+                    abspAp = abs(pAp)
+                    pr = abspr = rNorm²
+                    descent = true
+
+                    # TODO: find a way to not recompute t1 and t2
+                    t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
+                    t1 = maximum(t)
+                    # t2 = minimum(t)
+
+                    # @assert t1 > 0
+                    # @assert t2 < 0
+
+                    if ρ > 0  # case 1
+                        @debug(logger,
+                               @sprintf("quadratic is convex in direction r, curv = %7.1e", ρ))
+
+                        α = rNorm² / ρ
+
+                        if α ≥ t1
+                            α = t1
+                            on_boundary = true
+                        end
+
+                    else  # case 2
+                        @debug(logger,
+                               @sprintf("r is a direction of nonpositive curvature: %8.1e", ρ))
+
+                        α = t1
+                        on_boundary = true
+
+                    end
+
+                else
+
+                    α = descent ? t1 : t2
+                    on_boundary = true
+
+                end
+
+            elseif α ≥ t1
+                # at this point, it is not possible that α < 0 because pAp > 0
+                # (cf. Fong and Saunders)
+                @debug(logger, @sprintf("pAp = %8.1e > 0 but α = %8.1e ≥ t1 = %8.1e", pAp, α, t1))
+
+                α = t1  # > 0
+                on_boundary = true
+
             end
 
-            if (abspAp <= ϵ) | (absρ <= ϵ) # p'q = 0 or ρ = 0
-                @debug(logger, "p'Ap ≃ 0 or |ρ| ≃ 0")
-
-                if descent # descent = true
-                    α = t1 # > 0
-                    on_boundary = true
-                else # descent = false
-                    α = t2 # < 0
-                    on_boundary = true
-                end
-
-            elseif pAp < 0.0 # negative curvature
-                @debug(logger, "p'Ap < 0")
-                # @printf("p'Ap < 0")
-                if descent
-                    α = t1 # > 0
-                else α = t2 # < 0
-                end
-                on_boundary = true
-            elseif (!descent) & (α > 0)
-                @debug(logger, "p'Ap > 0, p is a rise direction and α > 0")
-                p = - p
-                pr = - pr # > 0
-                abspr = pr
-                descent = true
-
-                if α >= - t2 # positive root of ‖x-t*p‖²-Δ²
-                    α = - t2 # > 0
-                    on_boundary = true
-                end
-
-            elseif (!descent) | (α <= t2)
-                @debug(logger, "p'Ap > 0 but p is a rise direction or α ≤ t2")
-                α = t2 # < 0
-                on_boundary = true
-            elseif α >= t1
-                @debug(logger, "p'Ap > 0, p is a descent direction and α ≥ t1")
-                α = t1 # > 0
-                on_boundary = true
-            end
-
-        # else
-        #     verbose && @printf("\n")
+            info_line *= @sprintf(" %8.1e %8.1e %8.1e", α, t1, t2)
 
         end
 
-        x = x + α * p # new estimation
+        x = x + α * p
         xNorm = norm(x, 2)
         push!(xNorms, xNorm)
         Ax = A * x
-        m = - dot(b, x) + 0.5 * dot(x, Ax)
+        m = -dot(b, x) + 0.5 * dot(x, Ax)
         push!(mvalues, m)
-        r = r - α * q # residual
-        rNorm = norm(r, 2) # ‖r‖
+        r = r - α * q  # residual
+        rNorm = norm(r)
 
-        info_line *= @sprintf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, m)
         @info(logger, info_line)
 
         solved = (rNorm <= ϵ) | on_boundary
-        @debug(logger, @sprintf("solved = %s", solved))
-        # @printf("solved = %s", solved)
-        @debug(logger,@sprintf("on_boundary = %s", on_boundary))
-        # @printf("on_boundary = %s", on_boundary)
         tired = iter >= itmax
-
         (solved || tired) && continue
+
         oldpAp = pAp
         s = A * r
         ρbar = ρ
@@ -148,7 +161,6 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         descent = pr > 0.0
 
     end
-    # verbose && @printf("\n")
 
     return x
 end
