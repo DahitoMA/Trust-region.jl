@@ -9,7 +9,7 @@ import Krylov
 function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, itmax::Int=0) #, verbose::Bool=true)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
-    @info(logger, @sprintf("CR: system of %d equations in %d variables", n, n))
+    @info(loggerCR, @sprintf("CR: system of %d equations in %d variables", n, n))
 
     x = zeros(n) # initial estimation x = 0
     xNorm = 0.0
@@ -33,7 +33,8 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
     iter = 0
     itmax == 0 && (itmax = 2 * n)
-    @info(logger, @sprintf("%5s %7s %7s %8s %8s %8s %8s %8s", "Iter", "‖x‖", "‖r‖", "q", "p'r", "α", "t1", "t2"))
+    @info(loggerCR, @sprintf("%5s %7s %7s %8s %8s %8s %8s %8s", "Iter", "‖x‖", "‖r‖", "q", "p'r", "α", "t1", "t2"))
+    @info(loggerCR, @sprintf("%5d %7.1e %7.1e %8.1e %8.1e", iter, xNorm, rNorm, m, pr))
 
     descent = pr > 0  # p'r > 0 means p is a descent direction
     solved = rNorm <= ϵ
@@ -41,12 +42,11 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     on_boundary = false
 
     while ! (solved || tired)
-        info_line = @sprintf("%5d %7.1e %7.1e %8.1e %8.1e", iter, xNorm, rNorm, m, pr)
         iter += 1
         α = ρ / dot(q, q) # step
 
         if pAp ≤ 0 && Δ == 0
-            @critical(logger, "indefinite system and no trust region")
+            @critical(loggerCR, "indefinite system and no trust region")
             return x, p
         end
 
@@ -62,12 +62,11 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
             @assert t1 > 0
             @assert t2 < 0
 
-            if pAp ≤ 0
-                @debug(logger, @sprintf("nonpositive curvature: pAp = %8.1e", pAp))
-
+            if abspAp <= ϵ
+                @debug(loggerCR, @sprintf("p'Ap = %8.1e ≃ 0", pAp))
                 # according to Fong and Saunders, p'r = 0 can only happen if pAp ≤ 0
                 if abspr <= eps() * norm(p) * rNorm
-                    @debug(logger, @sprintf("p'r = %8.1e ≃ 0, redefining p := r", pr))
+                    @debug(loggerCR, @sprintf("p'r = %8.1e ≃ 0, redefining p := r", pr))
 
                     p = r # - ∇q(x)
                     # q(x + αr) = q(x) - α ‖r‖² + ½ α² r'Ar
@@ -89,7 +88,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
                     # @assert t2 < 0
 
                     if ρ > 0  # case 1
-                        @debug(logger,
+                        @debug(loggerCR,
                                @sprintf("quadratic is convex in direction r, curv = %7.1e", ρ))
 
                         α = rNorm² / ρ
@@ -98,34 +97,72 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
                             α = t1
                             on_boundary = true
                         end
+                        solved = true
 
                     else  # case 2
-                        @debug(logger,
+                        @debug(loggerCR,
                                @sprintf("r is a direction of nonpositive curvature: %8.1e", ρ))
 
                         α = t1
                         on_boundary = true
-
                     end
-
-                else
-
-                    α = descent ? t1 : t2
-                    on_boundary = true
 
                 end
 
-            elseif α ≥ t1
-                # at this point, it is not possible that α < 0 because pAp > 0
-                # (cf. Fong and Saunders)
-                @debug(logger, @sprintf("pAp = %8.1e > 0 but α = %8.1e ≥ t1 = %8.1e", pAp, α, t1))
+            elseif pAp > 0 && ρ > 0
+                @debug(loggerCR, @sprintf("positive curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e", pAp, ρ))
+                if α ≥ t1
+                    α = t1
+                    on_boundary = true
+                end
 
-                α = t1  # > 0
+            elseif pAp > 0 && ρ < 0
+                @debug(loggerCR, @sprintf("p'Ap = %8.1e > 0 and r'Ar = %8.1e < 0", pAp, ρ))
+                p = r
+                q = s # = Ar = Ap
+                pAp = ρ # = dot(p, q) = pAp = rAr
+                abspAp = abs(pAp)
+                pr = abspr = rNorm²
+                descent = true
+
+                t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
+                α = t1 = maximum(t)
+                on_boundary = true
+
+            elseif pAp < 0 && ρ > 0
+                @debug(loggerCR, @sprintf("p'Ap = %8.1e < 0 and r'Ar = %8.1e > 0", pAp, ρ))
+                α = descent ? t1 : t2
+                on_boundary = true
+
+            elseif pAp < 0 && ρ < 0
+                @debug(loggerCR, @sprintf("negative curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e ", pAp, ρ))
+                # q_p = q(x + ti * p) - q(x) = ti r'p + ½ (ti)² p'Ap, i = 1, 2
+                      # i = 1 if p is a descent direction and t2 otherwise
+                # q_r = q(x + t1 * r) - q(x) = t1 ‖r‖² + ½ (t1)² r'Ar
+                # if q_p > q_r, p is followed until the edge of the trust-region
+                # else r is followed until the edge of the trust-region
+
+                if descent
+                    α = t1
+                    dif = α * (rNorm² - pr) + 0.5 * α^2 * (pAp - ρ)
+                else
+                    α = t2
+                    dif = -α * pr + 0.5 * (α^2 * pAp - (t1)^2 * ρ) + t1 * rNorm²
+                end
+
+                if dif > 0
+                    @debug(loggerCR, @sprintf("r engenders a bigger decrease. q_p - q_r = %8.1e > 0", diff))
+                    p = r
+                    q = s # = Ar = Ap
+                    pAp = ρ # = dot(p, q) = pAp = rAr
+                    abspAp = abs(pAp)
+                    pr = abspr = rNorm²
+                    descent = true
+                    α = t1
+                end
                 on_boundary = true
 
             end
-
-            info_line *= @sprintf(" %8.1e %8.1e %8.1e", α, t1, t2)
 
         end
 
@@ -138,7 +175,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         r = r - α * q  # residual
         rNorm = norm(r)
 
-        @info(logger, info_line)
+        @info(loggerCR, @sprintf("%5d %7.1e %7.1e %8.1e %8.1e %8.1e %8.1e %8.1e", iter, xNorm, rNorm, m, pr, α, t1, t2))
 
         solved = (rNorm <= ϵ) | on_boundary
         tired = iter >= itmax
@@ -158,7 +195,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         rNorm² = rNorm * rNorm
         pr = rNorm² + β * pr - β * α * oldpAp # p'r
         abspr = abs(pr)
-        descent = pr > 0.0
+        descent = pr > 0
 
     end
 
