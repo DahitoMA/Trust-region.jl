@@ -1,13 +1,14 @@
 # An implemantation of the trust-region method
-# TRCG(model,algo,filename,Δ,ϵa,ϵr,itemax,verbose) solves a continuous optimization problem 'model' within
+# TRCG(model,algo;filename,Δ,ϵa,ϵr,itemax) solves a continuous optimization problem 'model' within
 # a trust region of initial radius Δ and with tolerances ϵa and ϵr.
 # Steps are calculated using the argument 'algo', a truncated optimization method.
 
 """An implementation of the trust-region method
 """
-function TrustRegion(model, algo; filename::String=string("result", string(algo)), Δ::Float64=10., ϵa::Float64=1e-6, ϵr::Float64=1e-6, itemax::Int=10000, verbose::Bool=false)
+function TrustRegion(model, algo; filename::String=string("result", string(algo)), Δ::Float64=10., ϵa::Float64=1e-6, ϵr::Float64=1e-6, itemax::Int=10000)
 
-	x = model.meta.x0 # initial estimation from the model
+  @info(loggerTR, @sprintf("TrustRegion: resolution of %s using %s, initial radius = %8.1e", model.meta.name, string(algo), Δ))
+  x = model.meta.x0 # initial estimation from the model
 	n = model.meta.nvar # size of the problem
 	g = grad(model, x) # ∇f(x_0)
 	H = hess_op(model, x) # ∇²f(x_0)
@@ -25,26 +26,36 @@ function TrustRegion(model, algo; filename::String=string("result", string(algo)
 	vs_ite = [] # very successfull iterations
 	mvalues = [fx] # values of the quadratic model
 
-	jldname = string(filename, ".jld")
+  @debug(loggerTR, @sprintf("%4s  %9s  %7s  %7s", "Iter", "f", "‖∇f‖", "Radius"))
+  @debug(loggerTR, @sprintf("%4d  %9.2e  %7.1e  %7.1e", k, fx, normg, Δ))
+
+  jldname = string(filename, ".jld")
 	txtname = string(filename, ".txt")
 
 	while normg > ϵ && k < itemax # stopping criterion : ‖∇f(x_k)‖ <= ϵ or k >= itemax
 		k = k + 1
-		s = algo(H,-g,Δ) # step
+		s = algo(H, -g, Δ) # step
 		xtrial = x + s # x_k + s
 		fxtrial = obj(model, xtrial) # f(x_k + s)
+    @debug(loggerTR, @sprintf("fxtrial = %8.1e", fxtrial))
 		Δf = fxtrial - fx # f(x_k + s) - f(x_k)
+    @debug(loggerTR, @sprintf("fx = %8.1e", fx))
 
 		Hs = H * s
 		Δm = dot(g,s) + 0.5 * dot(s,Hs) # m_k(x_k + s) - m_k(x_k)
+    @debug(loggerTR, @sprintf("Δm = %8.1e", Δm))
+    abs(Δm) < eps(Float64) && @critical(loggerTR, "Δm ≃ 0")
 
 		# ratio ρ
 		ρ = Δf / Δm
+    @debug(loggerTR, @sprintf("ratio Δf/Δq = %8.1e", ρ))
 
 		# adaptation of the trust region
 		if ρ < 1.e-4
 			Δ = Δ / 3
+      @debug(loggerTR, @sprintf("Δf/Δq < 1e-4, new radius = %8.1e", Δ))
 		else
+      @debug(loggerTR, "Δf/Δq ≥ 1e-4")
 			x = xtrial
 			fx = fxtrial
 			g = grad(model,x) # ∇f(x_k)
@@ -55,14 +66,14 @@ function TrustRegion(model, algo; filename::String=string("result", string(algo)
 			ite = push!(ite, k)
 			if ρ >= 0.99 && ρ >= 1.e-4
 				Δ = 3 * Δ
+        @debug(loggerTR, @sprintf("Δf/Δq ≥ 0.99, new radius = %8.1e", Δ))
 				vs_ite = push!(vs_ite, k)
 			end
+      ρ < 0.99 && @debug(loggerTR, @sprintf("1e-4 ≤ Δf/Δq < 0.99, new radius = %8.1e", Δ))
 		end
 
-		if verbose == true
-			@printf("%4s  %9s  %7s  %7s  %8s\n", "Iter", "f", "‖∇f‖", "Radius", "Ratio")
-			@printf("%4d  %9.2e  %7.1e  %7.1e  %7.1e\n", k, fx, normg, Δ, ρ)
-		end
+    @debug(loggerTR, @sprintf("%4s  %9s  %7s  %7s  %8s", "Iter", "f", "‖∇f‖", "Radius", "Ratio"))
+		@debug(loggerTR, @sprintf("%4d  %9.2e  %7.1e  %7.1e  %7.1e", k, fx, normg, Δ, ρ))
 
 	end
 
