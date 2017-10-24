@@ -62,7 +62,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
             @assert t1 > 0
             @assert t2 < 0
 
-            if abspAp ≤ ϵ
+            if abspAp ≤ eps() * norm(p) * norm(q)
                 @debug(loggerCR, @sprintf("p'Ap = %8.1e ≃ 0", pAp))
                 # according to Fong and Saunders, p'r = 0 can only happen if pAp ≤ 0
                 if abspr ≤ eps() * norm(p) * rNorm
