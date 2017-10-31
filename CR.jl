@@ -1,12 +1,12 @@
 import Krylov
 
 # A truncated version of Stiefel’s Conjugate Residual method
-# CR(A, b, Δ, atol, rtol, itmax, verbose) solves the linear system 'A * x = b' or the least-squares problem :
+# CR(A, b, Δ, atol, rtol, itmax) solves the linear system 'A * x = b' or the least-squares problem :
 # 'min ‖b - A * x‖²' within a region of fixed radius Δ.
 
 """A truncated version of Stiefel’s Conjugate Residual method to solve the symmetric linear system Ax=b.
 """
-function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, itmax::Int=0) #, verbose::Bool=true)
+function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, itmax::Int=0)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
     @info(loggerCR, @sprintf("CR: system of %d equations in %d variables", n, n))
@@ -54,18 +54,21 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
 
             # find t1 > 0 and t2 < 0 such that ‖x + ti * p‖² = Δ²  (i = 1, 2)
             xNorm² = xNorm^2
+            @debug(loggerCR, @sprintf("Δ = %8.1e > 0 and ‖x‖² = %8.1e", Δ, xNorm²))
             t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
             t1 = maximum(t)
             t2 = minimum(t)
+            @debug(loggerCR, @sprintf("t1 = %8.1e and t2 = %8.1e", t1, t2))
+
 
             # pour debugger
             @assert t1 > 0
             @assert t2 < 0
 
-            if abspAp ≤ eps() * norm(p) * norm(q)
+            if abspAp ≤ eps() * norm(p) * norm(q) # p'Ap ≃ 0
                 @debug(loggerCR, @sprintf("p'Ap = %8.1e ≃ 0", pAp))
                 # according to Fong and Saunders, p'r = 0 can only happen if pAp ≤ 0
-                if abspr ≤ eps() * norm(p) * rNorm
+                if abspr ≤ eps() * norm(p) * rNorm # p'r ≃ 0
                     @debug(loggerCR, @sprintf("p'r = %8.1e ≃ 0, redefining p := r", pr))
 
                     p = r # - ∇q(x)
@@ -82,14 +85,10 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
                     # TODO: find a way to not recompute t1 and t2
                     t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
                     t1 = maximum(t)
-                    # t2 = minimum(t)
-
-                    # @assert t1 > 0
-                    # @assert t2 < 0
 
                     if ρ > 0  # case 1
                         @debug(loggerCR,
-                               @sprintf("quadratic is convex in direction r, curv = %7.1e", ρ))
+                               @sprintf("quadratic is convex in direction r, curv = %8.1e", ρ))
 
                         α = rNorm² / ρ
 
@@ -142,8 +141,8 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
             elseif pAp < 0 && ρ < 0
                 @debug(loggerCR, @sprintf("negative curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e ", pAp, ρ))
                 # q_p = q(x + ti * p) - q(x) = -ti * r'p + ½ (ti)² * p'Ap, i = 1, 2
-                      # i = 1 if p is a descent direction and t2 otherwise
-                # q_r = q(x + t1 * r) - q(x) = -tr * ‖r‖² + ½ (tr)² * r'Ar
+                      # i = 1 if p is a descent direction and 2 otherwise
+                # q_r = q(x + tr * r) - q(x) = -tr * ‖r‖² + ½ (tr)² * r'Ar
                 # dif = q_p - q_r
                 # if dif > 0, r is followed until the edge of the trust-region
                 # else p is followed until the edge of the trust-region
@@ -169,7 +168,8 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
                     pr = abspr = rNorm²
                     descent = true
                     α = tr
-                else @debug(loggerCR, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
+                else
+                    @debug(loggerCR, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
                 end
                 on_boundary = true
 
