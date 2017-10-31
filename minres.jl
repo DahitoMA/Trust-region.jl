@@ -1,7 +1,7 @@
 import Krylov
 
 # A truncated version of MINRES
-# minres(A,b,Δ,M,λ,atol,rtol,etol,window,itmax,conlim,verbose) solves the linear
+# minres(A,b,Δ,M,λ,atol,rtol,etol,window,itmax,conlim) solves the linear
 # system '(A + λ*M)x = b' or the least-squares problem : 'min ‖b - (A + λ*M)x‖²'
 # within a region of radius Δ.
 
@@ -12,13 +12,13 @@ function minres{T <: Number}(A :: AbstractLinearOperator, b :: Vector{T}, Δ::Fl
                              λ :: Float64=0.0,
                              atol :: Float64=1.0e-8, rtol :: Float64=1.0e-6,
                              etol :: Float64=0.0, window :: Int=5,
-                             itmax :: Int=0, conlim :: Float64=1.0e+8, verbose :: Bool=false)
+                             itmax :: Int=0, conlim :: Float64=1.0e+8)
 
 
     (m, n) = size(A)
     m == n || error("System must be square")
     size(b, 1) == m || error("Inconsistent problem size")
-    verbose && @printf("MINRES: system of size %d\n", n)
+    @info(loggerminres, @sprintf("MINRES: system of size %d", n))
     ϵM = eps(T)
     x = zeros(T, n)
     ctol = conlim > 0.0 ? 1./conlim : 0.0;
@@ -64,12 +64,12 @@ function minres{T <: Number}(A :: AbstractLinearOperator, b :: Vector{T}, Δ::Fl
     xENorm² = 0.0
     err_lbnd = 0.0
     err_vec = zeros(T, window)
-    # verbose && @printf("%5s  %7s  %7s  %7s  %8s  %8s  %7s  %7s\n",
-    #                    "Aprod", "‖r‖", "‖A'r‖", "β", "cos", "sin", "‖A‖", "κ(A)")
-    # verbose && @printf("%5d  %7.1e  %7.1e  %7.1e  %8.1e  %8.1e  %7.1e  %7.1e\n",
-    #                    0, rNorm, ArNorm, β, cs, sn, ANorm, Acond)
+    @debug(loggerminres, @sprintf("%5s  %7s  %7s  %7s  %8s  %8s  %7s  %7s",
+                       "Aprod", "‖r‖", "‖A'r‖", "β", "cos", "sin", "‖A‖", "κ(A)"))
+    @debug(loggerminres, @sprintf("%5d  %7.1e  %7.1e  %7.1e  %8.1e  %8.1e  %7.1e  %7.1e",
+                       0, rNorm, ArNorm, β, cs, sn, ANorm, Acond))
 
-    verbose && @printf("%5s %5s %14s %12s\n", "Iter", "‖x‖", "‖r‖", "q")
+    @info(loggerminres, @sprintf("%5s %5s %14s %12s", "Iter", "‖x‖", "‖r‖", "q"))
 
     iter = 0
     itmax == 0 && (itmax = n)
@@ -82,7 +82,7 @@ function minres{T <: Number}(A :: AbstractLinearOperator, b :: Vector{T}, Δ::Fl
     zero_resid = zero_resid_mach = zero_resid_lim = (rNorm ≤ tol)
     fwd_err = false
 
-    while rNorm > tol # ! (solved || tired || ill_cond)
+    while rNorm > tol || !tired# ! (solved || tired || ill_cond)
         iter = iter + 1
 
         # Generate next Lanczos vector.
@@ -127,30 +127,32 @@ function minres{T <: Number}(A :: AbstractLinearOperator, b :: Vector{T}, Δ::Fl
         w2 = copy(w)
         w = (v - oldϵ * w1 - δ * w2) / γ # descent direction
 
-        # solving ‖x+ti*w‖²-Δ² = 0 with i=1,2
-        xNorm² = xNorm^2
-        t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
-        t1 = maximum(t)
-        t2 = minimum(t)
+        if Δ > 0
+            # find t1 > 0 and t2 < 0 such that ‖x + ti * w‖² = Δ² (i=1,2)
+            xNorm² = xNorm^2
+            t = Krylov.to_boundary(x, w, Δ; flip = false, xNorm2 = xNorm²)
+            t1 = maximum(t)
+            t2 = minimum(t)
 
-        # if x is out of the trust region, w is followed until the edge of the
-        #trust region
-        if ϕ >= t1
-            x = x + t1 * w
-            q = dot(-b, x) + 1/2 * dot(x, A * x)
-            qvalues = push!(qvalues, q)
-            xNorm = norm(x, 2)
-            rNorm = norm(A*x - b)
-            verbose && @printf("%d %8.1e %8.1e %8.1e\n", iter, xNorm, rNorm, q)
-            return x
-        elseif ϕ <= t2
-            x = x + t2 * w
-            q = dot(-b, x) + 1/2 * dot(x, A * x)
-            qvalues = push!(qvalues, q)
-            xNorm = norm(x, 2)
-            rNorm = norm(A*x - b)
-            verbose && @printf("%d %8.1e %8.1e %8.1e\n", iter, xNorm, rNorm, q)
-            return x
+            # if x is out of the trust region, w is followed until the edge of the
+            #trust region
+            if ϕ >= t1
+                x = x + t1 * w
+                q = dot(-b, x) + 1/2 * dot(x, A * x)
+                qvalues = push!(qvalues, q)
+                xNorm = norm(x, 2)
+                rNorm = norm(A*x - b)
+                @info(loggerminres, @sprintf("%d %8.1e %8.1e %8.1e", iter, xNorm, rNorm, q))
+                return x
+            elseif ϕ <= t2
+                x = x + t2 * w
+                q = dot(-b, x) + 1/2 * dot(x, A * x)
+                qvalues = push!(qvalues, q)
+                xNorm = norm(x, 2)
+                rNorm = norm(A*x - b)
+                @info(loggerminres, @sprintf("%d %8.1e %8.1e %8.1e", iter, xNorm, rNorm, q))
+                return x
+            end
         end
 
         x = x + ϕ * w
@@ -187,14 +189,14 @@ function minres{T <: Number}(A :: AbstractLinearOperator, b :: Vector{T}, Δ::Fl
 
         Acond = γmax / γmin
 
-        # verbose && @printf("%5d  %7.1e  %7.1e  %7.1e  %8.1e  %8.1e  %7.1e  %7.1e\n",
-                        #  iter, test1, test2, β, cs, sn, ANorm, Acond)
+        @debug(loggerminres, @sprintf("%5d  %7.1e  %7.1e  %7.1e  %8.1e  %8.1e  %7.1e  %7.1e",
+                         iter, test1, test2, β, cs, sn, ANorm, Acond))
 
-        verbose && @printf("%d %8.1e %8.1e %8.1e\n", iter, xNorm, rNorm, q)
+        @info(loggerminres, @sprintf("%d %8.1e %8.1e %8.1e", iter, xNorm, rNorm, q))
 
         if iter == 1
             # A'b = 0 so x = 0 is a minimum least-squares solution
-            β / β₁ ≤ 10 * ϵM && return (x, "x = 0 is a minimum least-squares solution")
+            β / β₁ ≤ 10 * ϵM && return x#, "x = 0 is a minimum least-squares solution")
         end
 
         # Stopping conditions that do not depend on user input.
