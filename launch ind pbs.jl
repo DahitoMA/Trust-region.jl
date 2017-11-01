@@ -13,13 +13,18 @@ scosine, Shpak1, Shpak2, Shpak3, Shpak4, Shpak5, Shpak6, sinquad, sparsine, spar
 
 Algos = [CG, CR]
 
-loggerInd = MiniLogging.Logger("loggerInd", MiniLogging.INFO)
-push!(loggerInd.handlers, MiniLogging.Handler(open("indpbs.txt", "w"), "%Y-%m-%d %H:%M:%S"))
+D = ["model" "algo" "nvar" "f(x)" "f(x0)" "‖g(x)‖" "‖g(x0)‖" "#f" "#g" "#Hv" "#it" "#s_it" "#vs_it" "#rej_it"]
+
+# loggerInd = MiniLogging.Logger("loggerInd", MiniLogging.INFO)
+# push!(loggerInd.handlers, MiniLogging.Handler(open("indpbs.txt", "w"), "%Y-%m-%d %H:%M:%S"))
 
 for problem in Problems
     model = MathProgNLPModel(problem(), name=string(problem))
     for algo in Algos
-        @info(loggerInd, TrustRegion(model, algo))
+        # @info(loggerInd, TrustRegion(model, algo))
+        D = vcat(D, TrustRegion(model, algo))
         reset!(model)
   end
 end
+
+writedlm("indpbs.xls", D)
