@@ -11,7 +11,7 @@ D = ["model" "algo" "nvar" "f(x)" "f(x0)" "‖g(x)‖" "‖g(x0)‖" "#f" "#g" "
 for problem in Problems
     model = MathProgNLPModel(problem(), name=string(problem))
     for algo in Algos
-        @info(loggerCvx, TrustRegion(model, algo))
+        # @info(loggerCvx, TrustRegion(model, algo))
         D = vcat(D, TrustRegion(model, algo))
         reset!(model)
     end
