@@ -22,9 +22,9 @@ function minres{T <: Number}(A :: AbstractLinearOperator, b :: Vector{T}, Δ::Fl
     ϵM = eps(T)
     x = zeros(T, n)
     ctol = conlim > 0.0 ? 1./conlim : 0.0;
-    Δ² = Δ^2
 
-    qvalues = [0.0] # values of the quadratic model
+    q = 0.0
+    qvalues = [q] # values of the quadratic model
 
     # Initialize Lanczos process.
     # β₁ M v₁ = b.
@@ -69,10 +69,11 @@ function minres{T <: Number}(A :: AbstractLinearOperator, b :: Vector{T}, Δ::Fl
     @debug(loggerminres, @sprintf("%5d  %7.1e  %7.1e  %7.1e  %8.1e  %8.1e  %7.1e  %7.1e",
                        0, rNorm, ArNorm, β, cs, sn, ANorm, Acond))
 
-    @info(loggerminres, @sprintf("%5s %5s %14s %12s", "Iter", "‖x‖", "‖r‖", "q"))
-
     iter = 0
     itmax == 0 && (itmax = n)
+
+    @info(loggerminres, @sprintf("%5s %8s %5s %5s", "Iter", "‖x‖", "‖r‖", "q"))
+    @info(loggerminres, @sprintf("%5d %8.1e %8.1e %8.1e", iter, xNorm, rNorm, q))
 
     tol = atol + rtol * β₁
     status = "unknown"
@@ -82,7 +83,7 @@ function minres{T <: Number}(A :: AbstractLinearOperator, b :: Vector{T}, Δ::Fl
     zero_resid = zero_resid_mach = zero_resid_lim = (rNorm ≤ tol)
     fwd_err = false
 
-    while rNorm > tol || !tired# ! (solved || tired || ill_cond)
+    while ! (rNorm ≤ tol || tired) # ! (solved || tired || ill_cond)
         iter = iter + 1
 
         # Generate next Lanczos vector.
@@ -138,26 +139,26 @@ function minres{T <: Number}(A :: AbstractLinearOperator, b :: Vector{T}, Δ::Fl
             #trust region
             if ϕ >= t1
                 x = x + t1 * w
-                q = dot(-b, x) + 1/2 * dot(x, A * x)
+                q = -dot(b, x) + 0.5 * dot(x, A * x)
                 qvalues = push!(qvalues, q)
                 xNorm = norm(x, 2)
                 rNorm = norm(A*x - b)
-                @info(loggerminres, @sprintf("%d %8.1e %8.1e %8.1e", iter, xNorm, rNorm, q))
+                @info(loggerminres, @sprintf("%5d %8.1e %8.1e %8.1e", iter, xNorm, rNorm, q))
                 return x
             elseif ϕ <= t2
                 x = x + t2 * w
-                q = dot(-b, x) + 1/2 * dot(x, A * x)
+                q = -dot(b, x) + 0.5 * dot(x, A * x)
                 qvalues = push!(qvalues, q)
                 xNorm = norm(x, 2)
                 rNorm = norm(A*x - b)
-                @info(loggerminres, @sprintf("%d %8.1e %8.1e %8.1e", iter, xNorm, rNorm, q))
+                @info(loggerminres, @sprintf("%5d %8.1e %8.1e %8.1e", iter, xNorm, rNorm, q))
                 return x
             end
         end
 
         x = x + ϕ * w
         xNorm = norm(x, 2)
-        q = dot(-b, x) + 1/2 * dot(x, A * x)
+        q = -dot(b, x) + 0.5 * dot(x, A * x)
         qvalues = push!(qvalues, q)
 
         xENorm² = xENorm² + ϕ * ϕ
@@ -192,12 +193,12 @@ function minres{T <: Number}(A :: AbstractLinearOperator, b :: Vector{T}, Δ::Fl
         @debug(loggerminres, @sprintf("%5d  %7.1e  %7.1e  %7.1e  %8.1e  %8.1e  %7.1e  %7.1e",
                          iter, test1, test2, β, cs, sn, ANorm, Acond))
 
-        @info(loggerminres, @sprintf("%d %8.1e %8.1e %8.1e", iter, xNorm, rNorm, q))
+        @info(loggerminres, @sprintf("%5d %8.1e %8.1e %8.1e", iter, xNorm, rNorm, q))
 
-        if iter == 1
-            # A'b = 0 so x = 0 is a minimum least-squares solution
-            β / β₁ ≤ 10 * ϵM && return x#, "x = 0 is a minimum least-squares solution")
-        end
+        # if iter == 1
+        #     # A'b = 0 so x = 0 is a minimum least-squares solution
+        #     β / β₁ ≤ 10 * ϵM && return x, "x = 0 is a minimum least-squares solution"
+        # end
 
         # Stopping conditions that do not depend on user input.
         # This is to guard against tolerances that are unreasonably small.
