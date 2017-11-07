@@ -9,22 +9,16 @@ edensch, eg2, errinros_mod, extrosnb, fletcbv2, fletcbv3_mod, fletchcr, fminsrf2
 indef_mod, liarwhd, meyer3, morebv, ncb20, ncb20b, noncvxu2, noncvxun, nondia, penalty2, powellsg, schmvett,
 scosine, Shpak1, Shpak2, Shpak3, Shpak4, Shpak5, Shpak6, sinquad, sparsine, sparsqur, srosenbr, tointgss, tquartic, woods]
 
-# penalty3, sbrybnd
-
 Algos = [CG, CR]
 
-D = ["model" "algo" "nvar" "f(x)" "f(x0)" "‖g(x)‖" "‖g(x0)‖" "#f" "#g" "#Hv" "#it" "#s_it" "#vs_it" "#rej_it"]
-
-# loggerInd = MiniLogging.Logger("loggerInd", MiniLogging.INFO)
-# push!(loggerInd.handlers, MiniLogging.Handler(open("indpbs.txt", "w"), "%Y-%m-%d %H:%M:%S"))
+D = ["model     algo nvar   f(x)    f(x0)   ‖g(x)‖  ‖g(x0)‖   #f  #g  #Hv  #it #s_it #vs_it #rej_it"]
 
 for problem in Problems
     model = MathProgNLPModel(problem(), name=string(problem))
     for algo in Algos
-        # @info(loggerInd, TrustRegion(model, algo))
         D = vcat(D, TrustRegion(model, algo))
         reset!(model)
   end
 end
 
-writedlm("indpbs.xls", D)
+writedlm("indpbs2.txt", D)
