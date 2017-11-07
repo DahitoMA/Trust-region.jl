@@ -16,7 +16,6 @@ function CG(A, b, Δ::Float64=10., atol::Float64=1e-8, rtol::Float64=1e-6, itmax
     xNorms = [xNorm] # Values of ‖x‖
     r = -b # initial residual r = Ax-b = -b
     d = b # first descent direction
-    Δ² = Δ^2
     rNorm = norm(r, 2)
     ϵ = atol + rtol * rNorm
     q = 0.0
