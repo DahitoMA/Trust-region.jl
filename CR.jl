@@ -22,13 +22,12 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     absρ = abs(ρ)
     p = r
     q = s
-    Δ² = Δ^2
     m = 0.0
     mvalues = [m] # values of the quadratic model
     ϵ = atol + rtol * rNorm
     pr = rNorm²
     abspr = pr
-    pAp = ρ
+    pAp = ρ # = dot(p, q) = dot(r, s)
     abspAp = absρ
 
     iter = 0
@@ -201,7 +200,7 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         p = r + β * p # search direction
         q = s + β * q
 
-        pAp = dot(p, q)
+        pAp = ρ + β^2 * oldpAp # dot(p, q)
         abspAp = abs(pAp)
         rNorm² = rNorm * rNorm
         pr = rNorm² + β * pr - β * α * oldpAp # p'r
