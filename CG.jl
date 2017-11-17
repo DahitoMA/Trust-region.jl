@@ -17,7 +17,8 @@ function CG(A, b, Δ::Float64=10., atol::Float64=1e-8, rtol::Float64=1e-6, itmax
     r = -b # initial residual r = Ax-b = -b
     d = b # first descent direction
     rNorm = norm(r, 2)
-    ϵ = atol + rtol * rNorm
+    # ϵ = atol + rtol * rNorm
+    ϵ = rNorm * min(0.1, sqrt(rNorm))
     q = 0.0
     qvalues = [q] # values of the quadratic model
 
