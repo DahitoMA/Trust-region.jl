@@ -6,7 +6,7 @@ import Krylov
 
 """A truncated version of Stiefel’s Conjugate Residual method to solve the symmetric linear system Ax=b.
 """
-function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, itmax::Int=0)
+function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, itmax::Int=0; args...)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
     @info(loggerCR, @sprintf("CR: system of %d equations in %d variables", n, n))
@@ -24,7 +24,8 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     q = s
     m = 0.0
     mvalues = [m] # values of the quadratic model
-    ϵ = atol + rtol * rNorm
+    # ϵ = atol + rtol * rNorm
+    ϵ = rNorm * min(0.5, sqrt(rNorm))
     pr = rNorm²
     abspr = pr
     pAp = ρ # = dot(p, q) = dot(r, s)
@@ -183,7 +184,10 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         m = -dot(b, x) + 0.5 * dot(x, Ax)
         push!(mvalues, m)
         r = r - α * q  # residual
-        rNorm = norm(r)
+        rNorm² = abs(rNorm² - α * ρ)
+        # @printf("rNorm² = %8.1e and ||r||² = %8.1e\n", rNorm², norm(r) * norm(r))
+        rNorm = sqrt(rNorm²)
+        # @printf("rNorm = %8.1e and ||r|| = %8.1e\n", rNorm, norm(r))
 
         @info(loggerCR, @sprintf("%5d %7.1e %7.1e %8.1e %8.1e %8.1e %8.1e %8.1e", iter, xNorm, rNorm, m, pr, α, t1, t2))
 
@@ -191,7 +195,6 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         tired = iter >= itmax
         (solved || tired) && continue
 
-        oldpAp = pAp
         s = A * r
         ρbar = ρ
         ρ = dot(r, s)
@@ -200,10 +203,11 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
         p = r + β * p # search direction
         q = s + β * q
 
-        pAp = ρ + β^2 * oldpAp # dot(p, q)
+        pr = rNorm² + β * pr - β * α * pAp # p'r
+        # @printf("pr = %8.1e and p'r = %8.1e\n", pr, dot(p, r))
+        pAp = ρ + β^2 * pAp # dot(p, q)
+        # @printf("pAp = %8.1e and p'q = %8.1e\n", pAp, dot(p, q))
         abspAp = abs(pAp)
-        rNorm² = rNorm * rNorm
-        pr = rNorm² + β * pr - β * α * oldpAp # p'r
         abspr = abs(pr)
         descent = pr > 0
 
