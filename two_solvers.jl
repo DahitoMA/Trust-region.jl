@@ -1,5 +1,6 @@
 using Optimize
 using CUTEst
+
 # non convex problems
 # Problems = [AMPGO02, AMPGO03, AMPGO04, AMPGO05, AMPGO06, AMPGO08, AMPGO09,
 # AMPGO10, AMPGO11, AMPGO12, AMPGO13, AMPGO14, AMPGO15, AMPGO18,
@@ -16,7 +17,7 @@ using CUTEst
 # Problems = [arglina, arglinb, arglinc, arwhead, bdqrtic, brownden, cliff, clplatea, clplateb, clplatec, dixon3dq, dqdrtic, dqrtic, engval1, nasty, nondquar,
 # palmer1c, palmer1d, palmer2c, palmer3c, palmer4c, palmer5c, palmer5d, palmer6c, palmer7c, palmer8c, power, quartc, tridia, vardim]
 
-# All unconstrained problems
+# unconstrained OptimizationProblems
 # Problems = [AMPGO02, AMPGO03, AMPGO04, AMPGO05, AMPGO06, AMPGO08, AMPGO09,
 # AMPGO10, AMPGO11, AMPGO12, AMPGO13, AMPGO14, AMPGO15, AMPGO18,
 # AMPGO20, AMPGO21, AMPGO22,
@@ -30,8 +31,9 @@ using CUTEst
 # arglina, arglinb, arglinc, arwhead, bdqrtic, brownden, cliff, clplatea, clplateb, clplatec, dixon3dq, dqdrtic, dqrtic, engval1, nasty, nondquar,
 # palmer1c, palmer1d, palmer2c, palmer3c, palmer4c, palmer5c, palmer5d, palmer6c, palmer7c, palmer8c, power, quartc, tridia, vardim]
 
-#CUTEst problems
+# CUTEst problems
 Problems = open(readlines, "Problems.txt")
+Problems = deleteat!(Problems,56)
 
 n = 100
 
@@ -40,34 +42,48 @@ function two_solvers()
     # solvers = [TRCG, TRminres]
     # solvers = [TRCR, TRminres]
     bmark_args = Dict{Symbol, Any}(:skipif => model -> !unconstrained(model))
-    profile_args = Dict{Symbol, Any}(:title => "f+g+hprod")
-    bmark_and_profile(solvers,
-                    (MathProgNLPModel(p(n), name=string(p)) for p in Problems),
-                    bmark_args=bmark_args, profile_args=profile_args)
+    # profile_args = Dict{Symbol, Any}(:title => "f+g+hprod")
     # bmark_and_profile(solvers,
-    #                 (CUTEstModel(p(n), name=string(p)) for p in Problems),
+    #                 (MathProgNLPModel(p(n), name=string(p)) for p in Problems),
     #                 bmark_args=bmark_args, profile_args=profile_args)
+    bmark_solvers(solvers,
+                (CUTEstModel(p) for p in Problems);
+                bmark_args...) # for CUTEst problems
+
+    # bmark_solvers(solvers,
+    #             (MathProgNLPModel(p(n), name=string(p)) for p in Problems);
+    #             bmark_args...) # for OptimizationProblems
 end
 
-stats, profile = two_solvers()
-tf = font(15) # titlefont
-f = font(12)
-performance_profile(hcat([p[:, 1] for p in values(stats)]...),
+stats = two_solvers()
+# tf = font(15) # titlefont
+# f = font(12)
+pb_type = "CUTEst problems"
+p = performance_profile(hcat([p[:, 1] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
-                            title="Performance profile : #f in the resolution of convex and nonconvex problems with TRCG and TRCR",
-                            titlefont = tf, legendfont = f, guidefont = f) # Profile for #f
+                            title= string("Performance profile : #f in the resolution of", pb_type, "with TRCG and TRCR"))
+                            # titlefont = tf, legendfont = f, guidefont = f) # Profile for #f
 
-# performance_profile(hcat([p[:, 2] for p in values(stats)]...),
+Plots.savefig(p, string("profil_f_", pb_type, ".pdf"))
+
+# p = performance_profile(hcat([p[:, 2] for p in values(stats)]...),
 #                             collect(String, [string(s) for s in keys(stats)]),
-#                             title="Performance profile: #g in the resolution of convex and nonconvex problems with TRCG and TRCR",
-#                             titlefont = tf, legendfont = f, guidefont = f) # Profile for #g
+#                             title="Performance profile: #g in the resolution of nonconvex problems with TRCG and TRCR")
+#                             # titlefont = tf, legendfont = f, guidefont = f) # Profile for #g
 #
-# performance_profile(hcat([p[:, 3] for p in values(stats)]...),
-#                             collect(String, [string(s) for s in keys(stats)]),
-#                             title="Performance profile: #Hv in the resolution of nonconvex problems with TRCG and TRCR",
-#                             titlefont = tf, legendfont = f, guidefont = f) # Profile for #Hv
+# Plots.savefig(p, "profile_eval_g.pdf")
 #
-# performance_profile(hcat([sum(p, 2) for p in values(stats)]...),
+#
+# p = performance_profile(hcat([p[:, 3] for p in values(stats)]...),
 #                             collect(String, [string(s) for s in keys(stats)]),
-#                             title="Performance profile: #f + #g + #Hv in the resolution of nonconvex problems with TRCG and TRCR",
-#                             titlefont = tf, legendfont = f, guidefont = f) # Profile for #f + #g + #Hv
+#                             title="Performance profile: #Hv in the resolution of nonconvex problems with TRCG and TRCR")
+#                             # titlefont = tf, legendfont = f, guidefont = f) # Profile for #Hv
+#
+# Plots.savefig(p, "profile_eval_Hv.pdf")
+#
+# p = performance_profile(hcat([sum(p, 2) for p in values(stats)]...),
+#                             collect(String, [string(s) for s in keys(stats)]),
+#                             title="Performance profile: #f + #g + #Hv in the resolution of nonconvex problems with TRCG and TRCR")
+#                             # titlefont = tf, legendfont = f, guidefont = f) # Profile for #f + #g + #Hv
+#
+# Plots.savefig(p, "profile_eval_total.pdf")
