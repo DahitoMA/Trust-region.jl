@@ -2,7 +2,7 @@ using CUTEst
 using Krylov
 
 Problems = open(readlines, "ProblemsLS.txt")
-Problems = Problems[2:7]
+Problems = Problems[1:22]
 Algos = [cgls]#, lsqr, crls, lsmr]
 
 D = ["model     algo nvar   f(x)    f(x0)   ‖g(x)‖  ‖g(x0)‖   #f  #g  #Hv  #it #s_it #vs_it #rej_it"]
