@@ -1,0 +1,2 @@
+model     algo nvar   f(x)    f(x0)   ‖g(x)‖  ‖g(x0)‖   #f  #g  #Hv  #it #s_it #vs_it #rej_it
+BA-L1 Krylov.cgls   57  3.3e-04  6.4e+04 4.1e+01 3.1e+05    0    0    0 10000    2    1 9997
