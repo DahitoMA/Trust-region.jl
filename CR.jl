@@ -1,12 +1,12 @@
 import Krylov
 
 # A truncated version of Stiefel’s Conjugate Residual method
-# CR(A, b, Δ, atol, rtol, itmax) solves the linear system 'A * x = b' or the least-squares problem :
+# CR(A, b, Δ, itmax) solves the linear system 'A * x = b' or the least-squares problem :
 # 'min ‖b - A * x‖²' within a region of fixed radius Δ.
 
 """A truncated version of Stiefel’s Conjugate Residual method to solve the symmetric linear system Ax=b.
 """
-function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, itmax::Int=0; args...)
+function CR(A, b, Δ::Float64=10., itmax::Int=0; args...)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
     @info(loggerCR, @sprintf("CR: system of %d equations in %d variables", n, n))
@@ -24,7 +24,6 @@ function CR(A, b, Δ::Float64=10., atol::Float64=1.0e-8, rtol::Float64=1.0e-6, i
     q = s
     m = 0.0
     mvalues = [m] # values of the quadratic model
-    # ϵ = atol + rtol * rNorm
     ϵ = rNorm * min(0.5, sqrt(rNorm))
     pr = rNorm²
     abspr = pr
