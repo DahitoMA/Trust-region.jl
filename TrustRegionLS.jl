@@ -39,7 +39,7 @@ function TrustRegionLS(model, algo; filename::String=string("result", string(alg
 
 	while normg > ϵ && k < itemax # stopping criterion : ‖∇f(x_k)‖ <= ϵ or k >= itemax
 		k = k + 1
-		s = algo(A, -r, verbose = true) # step
+		s = algo(A, -r, radius = Δ , verbose = false) # step
         s = s[1]
 		xtrial = x + s # x_k + s
         rtrial = residual(lsmodel, xtrial) # F(x_k + s)
@@ -59,7 +59,9 @@ function TrustRegionLS(model, algo; filename::String=string("result", string(alg
 
 		# adaptation of the trust region
 		if ρ < 1.e-4
-			Δ = Δ / 3
+            if Δ > eps()
+                Δ = Δ / 3
+            end
             @debug(loggerTRLS, @sprintf("Δf/Δq < 1e-4, new radius = %8.1e", Δ))
 		else
             @debug(loggerTRLS, "Δf/Δq ≥ 1e-4")
