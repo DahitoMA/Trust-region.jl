@@ -34,7 +34,7 @@ function TrustRegion(model, algo; filename::String=string("result", string(algo)
 
 	while normg > ϵ && k < itemax # stopping criterion : ‖∇f(x_k)‖ <= ϵ or k >= itemax
 		k = k + 1
-		s = algo(H, -g, Δ) # step
+		s = algo(H, -g, Δ, 0., min(0.1, sqrt(normg))) # step
 		xtrial = x + s # x_k + s
 		fxtrial = obj(model, xtrial) # f(x_k + s)
         @debug(loggerTR, @sprintf("fxtrial = %8.1e", fxtrial))
@@ -52,9 +52,7 @@ function TrustRegion(model, algo; filename::String=string("result", string(algo)
 
 		# adaptation of the trust region
 		if ρ < 1.e-4
-            if Δ > eps()
-                Δ = Δ / 3
-            end
+            Δ = Δ / 3
             @debug(loggerTR, @sprintf("Δf/Δq < 1e-4, new radius = %8.1e", Δ))
 		else
             @debug(loggerTR, "Δf/Δq ≥ 1e-4")
