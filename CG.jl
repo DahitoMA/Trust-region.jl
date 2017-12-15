@@ -6,7 +6,7 @@ import Krylov
 """A truncated version of the conjugate gradient method to solve the symmetric linear system Ax=b.
 A can be positive definite or not.
 """
-function CG(A, b, Δ::Float64=10., itmax::Int=0; args...)
+function CG(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0; args...)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
     @info(loggerCG, @sprintf("CG: system of %d equations in %d variables", n, n))
@@ -17,7 +17,7 @@ function CG(A, b, Δ::Float64=10., itmax::Int=0; args...)
     r = -b # initial residual r = Ax-b = -b
     d = b # first descent direction
     rNorm = norm(r, 2)
-    ϵ = rNorm * min(0.1, sqrt(rNorm))
+    ϵ = ϵa + ϵr * rNorm # tolerance
     q = 0.0
     qvalues = [q] # values of the quadratic model
 
