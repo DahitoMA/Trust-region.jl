@@ -6,7 +6,7 @@ import Krylov
 
 """A truncated version of Stiefel’s Conjugate Residual method to solve the symmetric linear system Ax=b.
 """
-function CR(A, b, Δ::Float64=10., itmax::Int=0; args...)
+function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0; args...)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
     @info(loggerCR, @sprintf("CR: system of %d equations in %d variables", n, n))
@@ -24,7 +24,7 @@ function CR(A, b, Δ::Float64=10., itmax::Int=0; args...)
     q = s
     m = 0.0
     mvalues = [m] # values of the quadratic model
-    ϵ = rNorm * min(0.5, sqrt(rNorm))
+    ϵ = ϵa + ϵr * rNorm # tolerance
     pr = rNorm²
     abspr = pr
     pAp = ρ # = dot(p, q) = dot(r, s)
