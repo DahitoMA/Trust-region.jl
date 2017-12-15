@@ -1,16 +1,16 @@
 # An implemantation of the trust-region method for least squares problems
-# TrustRegionLS(model,algo;filename,Δ,ϵa,ϵr,itemax) solves a continuous optimization problem 'model' within
+# TrustRegionLS(lsmodel,algo;filename,Δ,ϵa,ϵr,itemax) solves a continuous optimization problem 'lsmodel' within
 # a trust region of initial radius Δ and with tolerances ϵa and ϵr.
 # Steps are calculated using the argument 'algo', a truncated optimization method.
 
 """An implementation of the trust-region method for least squares problems
 """
-function TrustRegionLS(model, algo; filename::String=string("result", string(algo)), Δ::Float64=10., ϵa::Float64=1e-6, ϵr::Float64=1e-6, itemax::Int=10000)#, args...)
+function TrustRegionLS(lsmodel, algo; filename::String=string("result", string(algo)), Δ::Float64=10., ϵa::Float64=1e-6, ϵr::Float64=1e-6, itemax::Int=10000)#, args...)
 
-    @info(loggerTRLS, @sprintf("TrustRegionLS: resolution of %s using %s, initial radius = %8.1e", model.meta.name, string(algo), Δ))
-    lsmodel = FeasibilityResidual(model)
-    n = model.meta.nvar # size of the problem
-    x = lsmodel.meta.x0 # initial estimation from the model
+    @info(loggerTRLS, @sprintf("TrustRegionLS: resolution of %s using %s, initial radius = %8.1e", lsmodel.meta.name, string(algo), Δ))
+
+    n = lsmodel.meta.nvar # size of the problem
+    x = lsmodel.meta.x0 # initial estimation from the lsmodel
     r = residual(lsmodel, x) # F(x_0)
     A = jac_op_residual(lsmodel, x) # J(x_0)
     g =  A' * r # ∇f(x_0) where f(x) = ½ ‖F(x)‖²
@@ -29,7 +29,7 @@ function TrustRegionLS(model, algo; filename::String=string("result", string(alg
     γ = A * x + r
     γNorm² = norm(γ)^2
     m = 0.5 * γNorm²
-	mvalues = [m] # values of the quadratic model
+	mvalues = [m] # values of the quadratic lsmodel
 
     @debug(loggerTRLS, @sprintf("%4s  %9s  %7s  %7s", "Iter", "f", "‖∇f‖", "Radius"))
     @debug(loggerTRLS, @sprintf("%4d  %9.2e  %7.1e  %7.1e", k, fx, normg, Δ))
@@ -39,7 +39,7 @@ function TrustRegionLS(model, algo; filename::String=string("result", string(alg
 
 	while normg > ϵ && k < itemax # stopping criterion : ‖∇f(x_k)‖ <= ϵ or k >= itemax
 		k = k + 1
-		s = algo(A, -r, radius = Δ , verbose = false) # step
+		s = algo(A, -r, atol = 0., rtol = min(0.1, sqrt(normg)), radius = Δ , verbose = false) # step
         s = s[1]
 		xtrial = x + s # x_k + s
         rtrial = residual(lsmodel, xtrial) # F(x_k + s)
@@ -59,9 +59,7 @@ function TrustRegionLS(model, algo; filename::String=string("result", string(alg
 
 		# adaptation of the trust region
 		if ρ < 1.e-4
-            if Δ > eps()
-                Δ = Δ / 3
-            end
+            Δ = Δ / 3
             @debug(loggerTRLS, @sprintf("Δf/Δq < 1e-4, new radius = %8.1e", Δ))
 		else
             @debug(loggerTRLS, "Δf/Δq ≥ 1e-4")
@@ -93,13 +91,13 @@ function TrustRegionLS(model, algo; filename::String=string("result", string(alg
 	# X = load(jldname)
 	# writedlm(txtname,X)
 
-  	@info(loggerTRLS, @sprintf("%30s %s %9s %9s %9s %9s %3s %3s %4s %4s %4s %4s %4s","name", "nvar", "f(x*)", "/ f(x0)", "‖∇f(x*)‖", "/ ‖∇f(x0)‖", "#f", "#g", "#Hv", "#it", "s_it", "vs_it", "reject_it"))
-  	@info(loggerTRLS, @sprintf("%30s %d  %8.1e  %8.1e    %7.1e  %7.1e     %d   %d   %d    %d    %d   %d     %d", model.meta.name, n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite),length(vs_ite), k-length(ite)))
+  	@info(loggerTRLS, @sprintf("%30s %s %9s %9s %9s %9s %3s %3s %3s %4s %4s %4s %4s","name", "nvar", "f(x*)", "/ f(x0)", "‖∇f(x*)‖", "/ ‖∇f(x0)‖", "#r", "#Av", "#A'v", "#it", "s_it", "vs_it", "reject_it"))
+  	@info(loggerTRLS, @sprintf("%30s %d  %8.1e  %8.1e    %7.1e  %7.1e     %d   %d   %d    %d    %d   %d     %d", lsmodel.meta.name, n, fx, fx0, normg, normg0, neval_residual(lsmodel), neval_jprod_residual(lsmodel), neval_jtprod_residual(lsmodel), k, length(ite)-length(vs_ite),length(vs_ite), k-length(ite)))
 
     optimal = normg ≤ ϵ
     tired = k ≥ itemax
     status = optimal ? :optimal : :tired
 
     # return x, fx, normg, k, optimal, tired, status # for use of two_solvers()
-    return [@sprintf("%5s %5s %4d %8.1e %8.1e %7.1e %7.1e %4d %4d %4d %4d %4d %4d %4d", model.meta.name, string(algo)[8:end], n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite))]
+    return [@sprintf("%5s %5s %4d %8.1e %8.1e %7.1e %7.1e %4d %4d %4d %4d %4d %4d %4d", lsmodel.meta.name, string(algo)[8:end], n, fx, fx0, normg, normg0, neval_residual(lsmodel), neval_jprod_residual(lsmodel), neval_jtprod_residual(lsmodel), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite))]
 end
