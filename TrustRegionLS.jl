@@ -46,10 +46,10 @@ function TrustRegionLS(lsmodel, algo; filename::String=string("result", string(a
 		fxtrial =  0.5 * norm(rtrial)^2 # f(x_k + s)
         @debug(loggerTRLS, @sprintf("fxtrial = %8.1e", fxtrial))
 		Δf = fxtrial - fx # f(x_k + s) - f(x_k)
-        @debug(loggerTRLS, @sprintf("fx = %8.1e", fx))
+        @debug(loggerTRLS, @sprintf("Δf = %8.1e", Δf))
 
 		As = A * s
-        Δm = 0.5 * dot(As, As + γ) # m_k(x_k + s) - m_k(x_k)
+        Δm = 0.5 * norm(As)^2 + dot(s, g) # m_k(x_k + s) - m_k(x_k)
         @debug(loggerTRLS, @sprintf("Δm = %8.1e", Δm))
         abs(Δm) < eps(Float64) && @critical(loggerTRLS, "Δm ≃ 0")
 
