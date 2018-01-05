@@ -11,7 +11,7 @@ mgh30, mgh31, mgh32, mgh33, mgh34, mgh35]
 function NLStwo_solvers() #for NLSProblems
     # solvers = Dict{String, Function}("cgls" => TRCGLS,"crls" => TRCRLS)
     # stats = Dict{String, Any}("cgls" => ["#r" "#Av" "A'v"], "crls" => ["#r" "#Av" "A'v"])
-    solvers = Dict{String, Function}("lsqr" => TRCGLS,"lsmr" => TRCRLS)
+    solvers = Dict{String, Function}("lsqr" => TRLSQR,"lsmr" => TRLSMR)
     stats = Dict{String, Any}("lsqr" => ["#r" "#Av" "A'v"], "lsmr" => ["#r" "#Av" "A'v"])
     for (name, solver) in solvers
         for p in Problems
