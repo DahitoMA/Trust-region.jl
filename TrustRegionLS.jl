@@ -1,4 +1,4 @@
-# An implemantation of the trust-region method for least squares problems
+# An implementation of the trust-region method for least squares problems
 # TrustRegionLS(lsmodel,algo;filename,Δ,ϵa,ϵr,itemax) solves a continuous optimization problem 'lsmodel' within
 # a trust region of initial radius Δ and with tolerances ϵa and ϵr.
 # Steps are calculated using the argument 'algo', a truncated optimization method.
@@ -99,6 +99,6 @@ function TrustRegionLS(lsmodel, algo; filename::String=string("result", string(a
     status = optimal ? "optimal" : "tired"
 
     # return x, fx, normg, k, optimal, tired, status # for use of two_solvers()
-    # return [@sprintf("%5s %5s %4d %8.1e %8.1e %7.1e %7.1e %4d %4d %4d %4d %4d %4d %4d", lsmodel.meta.name, string(algo)[8:end], n, fx, fx0, normg, normg0, neval_residual(lsmodel), neval_jprod_residual(lsmodel), neval_jtprod_residual(lsmodel), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite))]
-    return [neval_residual(lsmodel) neval_jprod_residual(lsmodel) neval_jtprod_residual(lsmodel)] #for NLStwo_solvers()
+    return [lsmodel.meta.name, string(algo)[8:end], n, fx, fx0, normg, normg0, neval_residual(lsmodel), neval_jprod_residual(lsmodel), neval_jtprod_residual(lsmodel), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite)] # for Least-squares problems
+    # return [neval_residual(lsmodel) neval_jprod_residual(lsmodel) neval_jtprod_residual(lsmodel)] #for NLStwo_solvers()
 end
