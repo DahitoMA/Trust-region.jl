@@ -1,3 +1,5 @@
+using OptimizationProblems
+
 Problems = [AMPGO02, AMPGO03, AMPGO04, AMPGO05, AMPGO06, AMPGO08, AMPGO09,
 AMPGO10, AMPGO11, AMPGO12, AMPGO13, AMPGO14, AMPGO15, AMPGO18,
 AMPGO20, AMPGO21, AMPGO22,
@@ -12,14 +14,17 @@ scosine, Shpak1, Shpak2, Shpak3, Shpak4, Shpak5, Shpak6, sinquad, sparsine, spar
 Algos = [CG, CR]
 
 D = ["model     algo nvar   f(x)    f(x0)   ‖g(x)‖  ‖g(x0)‖   #f  #g  #Hv  #it #s_it #vs_it #rej_it"]
+@info(loggerind, D[1])
 
 for problem in Problems
     model = MathProgNLPModel(problem(), name=string(problem))
     for algo in Algos
-        D = vcat(D, TrustRegion(model, algo))
+        T = TrustRegion(model, algo)
+        S = @sprintf("%5s %5s %4d %8.1e %8.1e %7.1e %7.1e %4d %4d %4d %4d %4d %4d %4d", T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9], T[10], T[11], T[12], T[13], T[14])
+        @info(loggerind, S)
+        D = vcat(D, S)
         reset!(model)
   end
 end
 
-# writedlm("indpbs2.txt", D)
 writedlm("indpbsCGCR.txt", D)
