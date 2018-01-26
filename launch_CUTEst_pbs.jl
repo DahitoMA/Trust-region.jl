@@ -1,5 +1,5 @@
 using CUTEst
-using Optimize
+# using Optimize
 
 # Problems = open(readlines, "cutest_unc.lst")
 
@@ -17,21 +17,19 @@ using Optimize
 # writedlm("Problems.txt", Problems)
 
 Problems = open(readlines, "Problems.txt")
-Problems = deleteat!(Problems,56) # pb "INDEF" not treated
+# Problems = deleteat!(Problems,56) # pb "INDEF" not treated
 Algos = [CG, CR]
 
 D = ["model     algo nvar   f(x)    f(x0)   ‖g(x)‖  ‖g(x0)‖   #f  #g  #Hv  #it #s_it #vs_it #rej_it"]
+@info(loggerCUTEst, D[1])
 
 for problem in Problems
     model = CUTEstModel(problem)
     for algo in Algos
-        # (fx, fx0, gNorm, g0Norm, iter, status, nf, ng, nhv, s_iter, vs_iter, r_iter) = TrustRegion(model, algo)
-        # @printf("%-15s  %5s %8d  %9.2e  %9.2e  %7.1e  %7.1e  %5d  %5d  %5d  %6d  %6d  %6d  %6d  %s\n",
-        #     model.meta.name, string(algo), model.meta.nvar, fx, fx0, gNorm, g0Norm,
-        #     nf, ng, nhv, iter, s_iter, vs_iter, r_iter, status)
-
-        # T = TrustRegion(model, algo)
-        D = vcat(D, TrustRegion(model, algo))
+        T = TrustRegion(model, algo)
+        S = @sprintf("%5s %5s %4d %8.1e %8.1e %7.1e %7.1e %4d %4d %4d %4d %4d %4d %4d", T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9], T[10], T[11], T[12], T[13], T[14])
+        @info(loggerCUTEst, S)
+        D = vcat(D, S)
         reset!(model)
     end
     finalize(model)
