@@ -1,4 +1,4 @@
-# An implemantation of the trust-region method
+# An implementation of the trust-region method
 # TrustRegion(model,algo;filename,Δ,ϵa,ϵr,itemax) solves a continuous optimization problem 'model' within
 # a trust region of initial radius Δ and with tolerances ϵa and ϵr.
 # Steps are calculated using the argument 'algo', a truncated optimization method.
@@ -88,8 +88,8 @@ function TrustRegion(model, algo; filename::String=string("result", string(algo)
     tired = k ≥ itemax
     status = optimal ? "optimal" : "tired"
 
-    return x, fx, normg, k, optimal, tired, status # for use of two_solvers()
-    # return fx, fx0, normg, normg0, k, status, neval_obj(model), neval_grad(model), neval_hprod(model), length(ite)-length(vs_ite), length(vs_ite), k-length(ite) # for CUTEstpbs
-    # return [@sprintf("%5s %5s %4d %8.1e %8.1e %7.1e %7.1e %4d %4d %4d %4d %4d %4d %4d", model.meta.name[22:end], string(algo), n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite))]
-    # return [@sprintf("%5s %5s %4d %8.1e %8.1e %7.1e %7.1e %4d %4d %4d %4d %4d %4d %4d", model.meta.name, string(algo), n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite))]
+    # return x, fx, normg, k, optimal, tired, status # for use of two_solvers()
+    return [model.meta.name[22:end], string(algo), n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite)] # for OptimizationProblems
+    # return [model.meta.name, string(algo), n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite)] # for CUTEst problems
+
 end
