@@ -1,12 +1,13 @@
 import Krylov
 
 # A truncated version of Stiefel’s Conjugate Residual method
-# CR(A, b, Δ, itmax) solves the linear system 'A * x = b' or the least-squares problem :
+# CR(A, b, Δ, itmax; quad) solves the linear system 'A * x = b' or the least-squares problem :
 # 'min ‖b - A * x‖²' within a region of fixed radius Δ.
 
 """A truncated version of Stiefel’s Conjugate Residual method to solve the symmetric linear system Ax=b.
+If quad = true, the values of the quadratic model are computed.
 """
-function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0; args...)
+function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0; quad::Bool=false)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
     @info(loggerCR, @sprintf("CR: system of %d equations in %d variables", n, n))
@@ -22,8 +23,13 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
     absρ = abs(ρ)
     p = r
     q = s
-    m = 0.0
-    mvalues = [m] # values of the quadratic model
+    if quad
+        m = 0.0
+        mvalues = [m] # values of the quadratic model
+        mstr = @sprintf("%8.1e", m)
+    else
+        mstr = ""
+    end
     ϵ = ϵa + ϵr * rNorm # tolerance
     pr = rNorm²
     abspr = pr
@@ -33,7 +39,7 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
     iter = 0
     itmax == 0 && (itmax = 2 * n)
     @info(loggerCR, @sprintf("%5s %7s %7s %8s %8s %8s %8s %8s", "Iter", "‖x‖", "‖r‖", "q", "p'r", "α", "t1", "t2"))
-    @info(loggerCR, @sprintf("%5d %7.1e %7.1e %8.1e %8.1e", iter, xNorm, rNorm, m, pr))
+    @info(loggerCR, @sprintf("%5d %7.1e %7.1e %9s %8.1e", iter, xNorm, rNorm, mstr, pr))
 
     descent = pr > 0  # p'r > 0 means p is a descent direction
     solved = rNorm ≤ ϵ
@@ -179,16 +185,18 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
         x = x + α * p
         xNorm = norm(x, 2)
         push!(xNorms, xNorm)
-        Ax = A * x
-        m = -dot(b, x) + 0.5 * dot(x, Ax)
-        push!(mvalues, m)
+        if quad
+            m = -dot(b, x) + 0.5 * dot(x, A * x)
+            push!(mvalues, m)
+            mstr = @sprintf("%8.1e", m)
+        end
         r = r - α * q  # residual
         rNorm² = abs(rNorm² - α * ρ)
         # @printf("rNorm² = %8.1e and ||r||² = %8.1e\n", rNorm², norm(r) * norm(r))
         rNorm = sqrt(rNorm²)
         # @printf("rNorm = %8.1e and ||r|| = %8.1e\n", rNorm, norm(r))
 
-        @info(loggerCR, @sprintf("%5d %7.1e %7.1e %8.1e %8.1e %8.1e %8.1e %8.1e", iter, xNorm, rNorm, m, pr, α, t1, t2))
+        @info(loggerCR, @sprintf("%5d %7.1e %7.1e %9s %8.1e %8.1e %8.1e %8.1e", iter, xNorm, rNorm, mstr, pr, α, t1, t2))
 
         solved = (rNorm <= ϵ) | on_boundary
         tired = iter >= itmax
