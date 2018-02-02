@@ -1,12 +1,13 @@
 import Krylov
 
 # A truncated version of the conjugate gradient method.
-# CG(A,b,Δ,itmax) solves the linear system 'A * x = b' within a region of radius Δ.
+# CG(A,b,Δ,itmax; quad) solves the linear system 'A * x = b' within a region of radius Δ.
 
 """A truncated version of the conjugate gradient method to solve the symmetric linear system Ax=b.
+If quad = true, the values of the quadratic model are computed.
 A can be positive definite or not.
 """
-function CG(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0; args...)
+function CG(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0; quad::Bool=false)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
     @info(loggerCG, @sprintf("CG: system of %d equations in %d variables", n, n))
@@ -18,13 +19,19 @@ function CG(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
     d = b # first descent direction
     rNorm = norm(r, 2)
     ϵ = ϵa + ϵr * rNorm # tolerance
-    q = 0.0
-    qvalues = [q] # values of the quadratic model
+    if quad
+        q = 0.0
+        qvalues = [q] # values of the quadratic model
+        qstr = @sprintf("%8.1e", q)
+    else
+        qstr = ""
+    end
+
 
     iter = 0
     itmax == 0 && (itmax = 2 * n)
     @info(loggerCG, @sprintf("%5s %6s %10s %10s %10s %10s\n", "Iter", "‖x‖", "‖r‖", "q", "α", "t1"))
-    @info(loggerCG, @sprintf("    %d  %8.1e    %8.1e    %8.1e", iter, xNorm, rNorm, q))
+    @info(loggerCG, @sprintf("    %d  %8.1e    %8.1e    %5s", iter, xNorm, rNorm, qstr))
 
     solved = rNorm ≤ ϵ
     tired = iter ≥ itmax
@@ -62,13 +69,17 @@ function CG(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
         x = x + α * d # new estimation
         xNorm = norm(x, 2)
         push!(xNorms, xNorm)
-        q = -dot(b, x) + 0.5 * dot(x, A * x)
-        push!(qvalues, q)
+
+        if quad
+            q = -dot(b, x) + 0.5 * dot(x, A * x)
+            push!(qvalues, q)
+            qsrt = @sprintf("%8.1e", q)
+        end
         roldNorm = rNorm
         r = r + α * Ad # new residual
         rNorm = norm(r, 2)
 
-        @info(loggerCG, @sprintf("    %d  %8.1e    %8.1e    %8.1e  %8.1e  %8.1e", iter, xNorm, rNorm, q, α, t1))
+        @info(loggerCG, @sprintf("    %d  %8.1e    %8.1e    %5s  %8.1e  %8.1e", iter, xNorm, rNorm, qstr, α, t1))
 
         solved = (rNorm ≤ ϵ) | on_boundary
         tired = iter ≥ itmax
