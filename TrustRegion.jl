@@ -89,7 +89,11 @@ function TrustRegion(model, algo; filename::String=string("result", string(algo)
     status = optimal ? "optimal" : "tired"
 
     # return x, fx, normg, k, optimal, tired, status # for use of two_solvers()
-    return [model.meta.name[22:end], string(algo), n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite)] # for OptimizationProblems
-    # return [model.meta.name, string(algo), n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite)] # for CUTEst problems
+    fx = @sprintf("%8.3e", fx)
+    fx0 = @sprintf("%8.3e", fx0)
+    normg = @sprintf("%7.1e", normg)
+    normg0 = @sprintf("%7.1e", normg0)
+    return [model.meta.name[22:end] n fx fx0 normg normg0 neval_obj(model) neval_grad(model) neval_hprod(model) k (length(ite)-length(vs_ite)) length(vs_ite) k-length(ite)] # for OptimizationProblems
+    # return [model.meta.name, n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite)] # for CUTEst problems
 
 end
