@@ -19,7 +19,7 @@ import DataFrames
 # writedlm("Problems.txt", Problems)
 
 Problems = open(readlines, "Problems.txt")
-# Problems = deleteat!(Problems,56) # pb "INDEF" not treated
+Problems = deleteat!(Problems,56) # pb "INDEF" not treated
 algo = CR
 csvname = string("CUTEstTR",algo,".csv")
 
