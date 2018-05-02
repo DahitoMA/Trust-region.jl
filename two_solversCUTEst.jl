@@ -5,7 +5,7 @@ using OptimizationProblems
 
 # CUTEst problems
 Problems = open(readlines, "Problems.txt")
-# Problems = deleteat!(Problems,56)
+Problems = deleteat!(Problems,56) # pb "INDEF" not treated
 
 n = 100
 
