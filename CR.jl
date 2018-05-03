@@ -70,6 +70,12 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
             @assert t1 > 0
             @assert t2 < 0
 
+            if ! (pAp > 0 && ρ > 0)
+                t = Krylov.to_boundary(x, r, Δ; flip = false, xNorm2 = xNorm²)
+                tr = maximum(t)
+            end
+
+
             if abspAp ≤ eps() * norm(p) * norm(q) # p'Ap ≃ 0
                 @debug(loggerCR, @sprintf("p'Ap = %8.1e ≃ 0", pAp))
                 # according to Fong and Saunders, p'r = 0 can only happen if pAp ≤ 0
@@ -110,12 +116,28 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
                         α = t1
                         on_boundary = true
                     end
-                elseif descent
-                    α = t1
-                    on_boundary = true
                 else
-                    α = t2
+                    # q_p = q(x + ti * p) - q(x) = -ti * r'p + ½ (ti)² * p'Ap, i = 1, 2
+                          # i = 1 if p is a descent direction and 2 otherwise
+                    # q_r = q(x + tr * r) - q(x) = -tr * ‖r‖² + ½ (tr)² * r'Ar
+                    # dif = q_p - q_r
+                    # if dif > 0, r is followed until the edge of the trust-region
+                    # else p is followed until the edge of the trust-region
+                    α = descent ? t1 : t2
+                    dif = -α * pr + tr * rNorm² + 0.5 * (α^2 * pAp - (tr)^2 * ρ)
+
+                    if dif > 0
+                        @debug(loggerCR, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
+                        @debug(loggerCR, "redefining p := r")
+                        p = r
+                        q = s # = Ar = Ap
+                        descent = true
+                        α = tr
+                    else
+                        @debug(loggerCR, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
+                    end
                     on_boundary = true
+
                 end
 
             elseif pAp > 0 && ρ > 0
@@ -127,40 +149,7 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
 
             elseif pAp > 0 && ρ < 0
                 @debug(loggerCR, @sprintf("p'Ap = %8.1e > 0 and r'Ar = %8.1e < 0", pAp, ρ))
-                p = r
-                q = s # = Ar = Ap
-                pAp = ρ # = dot(p, q) = pAp = rAr
-                abspAp = abs(pAp)
-                pr = abspr = rNorm²
-                descent = true
-
-                t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
-                α = t1 = maximum(t)
-                on_boundary = true
-
-            elseif pAp < 0 && ρ > 0
-                @debug(loggerCR, @sprintf("p'Ap = %8.1e < 0 and r'Ar = %8.1e > 0", pAp, ρ))
                 α = descent ? t1 : t2
-                on_boundary = true
-
-            elseif pAp < 0 && ρ < 0
-                @debug(loggerCR, @sprintf("negative curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e ", pAp, ρ))
-                # q_p = q(x + ti * p) - q(x) = -ti * r'p + ½ (ti)² * p'Ap, i = 1, 2
-                      # i = 1 if p is a descent direction and 2 otherwise
-                # q_r = q(x + tr * r) - q(x) = -tr * ‖r‖² + ½ (tr)² * r'Ar
-                # dif = q_p - q_r
-                # if dif > 0, r is followed until the edge of the trust-region
-                # else p is followed until the edge of the trust-region
-
-                t = Krylov.to_boundary(x, r, Δ; flip = false, xNorm2 = xNorm²)
-                tr = maximum(t)
-
-                if descent
-                    α = t1
-                else
-                    α = t2
-                end
-
                 dif = -α * pr + tr * rNorm² + 0.5 * (α^2 * pAp - (tr)^2 * ρ)
 
                 if dif > 0
@@ -168,9 +157,43 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
                     @debug(loggerCR, "redefining p := r")
                     p = r
                     q = s # = Ar = Ap
-                    pAp = ρ # = dot(p, q) = pAp = rAr
-                    abspAp = abs(pAp)
-                    pr = abspr = rNorm²
+                    descent = true
+                    α = tr
+                else
+                    @debug(loggerCR, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
+                end
+                on_boundary = true
+
+            elseif pAp < 0 && ρ > 0
+                @debug(loggerCR, @sprintf("p'Ap = %8.1e < 0 and r'Ar = %8.1e > 0", pAp, ρ))
+                α = descent ? t1 : t2
+                dif = -α * pr + tr * rNorm² + 0.5 * (α^2 * pAp - (tr)^2 * ρ)
+
+                if dif > 0
+                    @debug(loggerCR, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
+                    @debug(loggerCR, "redefining p := r")
+                    p = r
+                    q = s # = Ar = Ap
+                    descent = true
+                    α = tr
+                else
+                    @debug(loggerCR, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
+                end
+                on_boundary = true
+
+            elseif pAp < 0 && ρ < 0
+                @debug(loggerCR, @sprintf("negative curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e ", pAp, ρ))
+                α = descent ? t1 : t2
+                dif = -α * pr + tr * rNorm² + 0.5 * (α^2 * pAp - (tr)^2 * ρ)
+
+                if dif > 0
+                    @debug(loggerCR, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
+                    @debug(loggerCR, "redefining p := r")
+                    p = r
+                    q = s # = Ar = Ap
+                    # pAp = ρ # = dot(p, q) = pAp = rAr
+                    # abspAp = abs(pAp)
+                    # pr = abspr = rNorm²
                     descent = true
                     α = tr
                 else
