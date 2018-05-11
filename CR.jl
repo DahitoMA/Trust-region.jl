@@ -7,10 +7,10 @@ import Krylov
 """A truncated version of Stiefel’s Conjugate Residual method to solve the symmetric linear system Ax=b.
 If quad = true, the values of the quadratic model are computed.
 """
-function CRmaster(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0; quad::Bool=false)
+function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0; quad::Bool=false)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
-    @info(loggerCRmaster, @sprintf("CR: system of %d equations in %d variables", n, n))
+    @info(loggerCR, @sprintf("CR: system of %d equations in %d variables", n, n))
 
     x = zeros(n) # initial estimation x = 0
     xNorm = 0.0
@@ -38,8 +38,8 @@ function CRmaster(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, i
 
     iter = 0
     itmax == 0 && (itmax = 2 * n)
-    @info(loggerCRmaster, @sprintf("%5s %7s %7s %8s %8s %8s %8s %8s", "Iter", "‖x‖", "‖r‖", "q", "p'r", "α", "t1", "t2"))
-    @info(loggerCRmaster, @sprintf("%5d %7.1e %7.1e %9s %8.1e", iter, xNorm, rNorm, mstr, pr))
+    @info(loggerCR, @sprintf("%5s %7s %7s %8s %8s %8s %8s %8s", "Iter", "‖x‖", "‖r‖", "q", "p'r", "α", "t1", "t2"))
+    @info(loggerCR, @sprintf("%5d %7.1e %7.1e %9s %8.1e", iter, xNorm, rNorm, mstr, pr))
 
     descent = pr > 0  # p'r > 0 means p is a descent direction
     solved = rNorm ≤ ϵ
@@ -51,7 +51,7 @@ function CRmaster(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, i
         α = ρ / dot(q, q) # step
 
         if pAp ≤ 0 && Δ == 0
-            @critical(loggerCRmaster, "indefinite system and no trust region")
+            @critical(loggerCR, "indefinite system and no trust region")
             return x, p
         end
 
@@ -59,11 +59,11 @@ function CRmaster(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, i
 
             # find t1 > 0 and t2 < 0 such that ‖x + ti * p‖² = Δ²  (i = 1, 2)
             xNorm² = xNorm^2
-            @debug(loggerCRmaster, @sprintf("Δ = %8.1e > 0 and ‖x‖² = %8.1e", Δ, xNorm²))
+            @debug(loggerCR, @sprintf("Δ = %8.1e > 0 and ‖x‖² = %8.1e", Δ, xNorm²))
             t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
             t1 = maximum(t)
             t2 = minimum(t)
-            @debug(loggerCRmaster, @sprintf("t1 = %8.1e and t2 = %8.1e", t1, t2))
+            @debug(loggerCR, @sprintf("t1 = %8.1e and t2 = %8.1e", t1, t2))
 
 
             # pour debugger
@@ -71,10 +71,10 @@ function CRmaster(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, i
             @assert t2 < 0
 
             if abspAp ≤ eps() * norm(p) * norm(q) # p'Ap ≃ 0
-                @debug(loggerCRmaster, @sprintf("p'Ap = %8.1e ≃ 0", pAp))
+                @debug(loggerCR, @sprintf("p'Ap = %8.1e ≃ 0", pAp))
                 # according to Fong and Saunders, p'r = 0 can only happen if pAp ≤ 0
                 if abspr ≤ eps() * norm(p) * rNorm # p'r ≃ 0
-                    @debug(loggerCRmaster, @sprintf("p'r = %8.1e ≃ 0, redefining p := r", pr))
+                    @debug(loggerCR, @sprintf("p'r = %8.1e ≃ 0, redefining p := r", pr))
 
                     p = r # - ∇q(x)
                     # q(x + αr) = q(x) - α ‖r‖² + ½ α² r'Ar
@@ -92,7 +92,7 @@ function CRmaster(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, i
                     t1 = maximum(t)
 
                     if ρ > 0  # case 1
-                        @debug(loggerCRmaster,
+                        @debug(loggerCR,
                                @sprintf("quadratic is convex in direction r, curv = %8.1e", ρ))
 
                         α = rNorm² / ρ
@@ -104,7 +104,7 @@ function CRmaster(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, i
                         solved = true
 
                     else  # case 2
-                        @debug(loggerCRmaster,
+                        @debug(loggerCR,
                                @sprintf("r is a direction of nonpositive curvature: %8.1e", ρ))
 
                         α = t1
@@ -119,19 +119,19 @@ function CRmaster(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, i
                 end
 
             elseif pAp > 0 && ρ > 0
-                @debug(loggerCRmaster, @sprintf("positive curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e", pAp, ρ))
+                @debug(loggerCR, @sprintf("positive curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e", pAp, ρ))
                 if α ≥ t1
                     α = t1
                     on_boundary = true
                 end
 
             elseif pAp > 0 && ρ < 0
-                @debug(loggerCRmaster, @sprintf("p'Ap = %8.1e > 0 and r'Ar = %8.1e < 0", pAp, ρ))
+                @debug(loggerCR, @sprintf("p'Ap = %8.1e > 0 and r'Ar = %8.1e < 0", pAp, ρ))
                 p = r
                 q = s # = Ar = Ap
-                # pAp = ρ # = dot(p, q) = pAp = rAr
-                # abspAp = abs(pAp)
-                # pr = abspr = rNorm²
+                pAp = ρ # = dot(p, q) = pAp = rAr
+                abspAp = abs(pAp)
+                pr = abspr = rNorm²
                 descent = true
 
                 t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
@@ -139,12 +139,12 @@ function CRmaster(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, i
                 on_boundary = true
 
             elseif pAp < 0 && ρ > 0
-                @debug(loggerCRmaster, @sprintf("p'Ap = %8.1e < 0 and r'Ar = %8.1e > 0", pAp, ρ))
+                @debug(loggerCR, @sprintf("p'Ap = %8.1e < 0 and r'Ar = %8.1e > 0", pAp, ρ))
                 α = descent ? t1 : t2
                 on_boundary = true
 
             elseif pAp < 0 && ρ < 0
-                @debug(loggerCRmaster, @sprintf("negative curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e ", pAp, ρ))
+                @debug(loggerCR, @sprintf("negative curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e ", pAp, ρ))
                 # q_p = q(x + ti * p) - q(x) = -ti * r'p + ½ (ti)² * p'Ap, i = 1, 2
                       # i = 1 if p is a descent direction and 2 otherwise
                 # q_r = q(x + tr * r) - q(x) = -tr * ‖r‖² + ½ (tr)² * r'Ar
@@ -164,17 +164,17 @@ function CRmaster(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, i
                 dif = -α * pr + tr * rNorm² + 0.5 * (α^2 * pAp - (tr)^2 * ρ)
 
                 if dif > 0
-                    @debug(loggerCRmaster, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
-                    @debug(loggerCRmaster, "redefining p := r")
+                    @debug(loggerCR, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
+                    @debug(loggerCR, "redefining p := r")
                     p = r
                     q = s # = Ar = Ap
-                    # pAp = ρ # = dot(p, q) = pAp = rAr
-                    # abspAp = abs(pAp)
-                    # pr = abspr = rNorm²
+                    pAp = ρ # = dot(p, q) = pAp = rAr
+                    abspAp = abs(pAp)
+                    pr = abspr = rNorm²
                     descent = true
                     α = tr
                 else
-                    @debug(loggerCRmaster, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
+                    @debug(loggerCR, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
                 end
                 on_boundary = true
 
@@ -196,7 +196,7 @@ function CRmaster(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, i
         rNorm = sqrt(rNorm²)
         # @printf("rNorm = %8.1e and ||r|| = %8.1e\n", rNorm, norm(r))
 
-        @info(loggerCRmaster, @sprintf("%5d %7.1e %7.1e %9s %8.1e %8.1e %8.1e %8.1e", iter, xNorm, rNorm, mstr, pr, α, t1, t2))
+        @info(loggerCR, @sprintf("%5d %7.1e %7.1e %9s %8.1e %8.1e %8.1e %8.1e", iter, xNorm, rNorm, mstr, pr, α, t1, t2))
 
         solved = (rNorm <= ϵ) | on_boundary
         tired = iter >= itmax
