@@ -10,7 +10,7 @@ If quad = true, the values of the quadratic model are computed.
 function CRv2(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0; quad::Bool=false)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
-    @info(loggerCR, @sprintf("CR: system of %d equations in %d variables", n, n))
+    @info(loggerCRv2, @sprintf("CR: system of %d equations in %d variables", n, n))
 
     x = zeros(n) # initial estimation x = 0
     xNorm = 0.0
@@ -38,8 +38,8 @@ function CRv2(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax
 
     iter = 0
     itmax == 0 && (itmax = 2 * n)
-    @info(loggerCR, @sprintf("%5s %7s %7s %8s %8s %8s %8s %8s", "Iter", "‖x‖", "‖r‖", "q", "p'r", "α", "t1", "t2"))
-    @info(loggerCR, @sprintf("%5d %7.1e %7.1e %9s %8.1e", iter, xNorm, rNorm, mstr, pr))
+    @info(loggerCRv2, @sprintf("%5s %7s %7s %8s %8s %8s %8s %8s", "Iter", "‖x‖", "‖r‖", "q", "p'r", "α", "t1", "t2"))
+    @info(loggerCRv2, @sprintf("%5d %7.1e %7.1e %9s %8.1e", iter, xNorm, rNorm, mstr, pr))
 
     descent = pr > 0  # p'r > 0 means p is a descent direction
     solved = rNorm ≤ ϵ
@@ -51,7 +51,7 @@ function CRv2(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax
         α = ρ / dot(q, q) # step
 
         if pAp ≤ 0 && Δ == 0
-            @critical(loggerCR, "indefinite system and no trust region")
+            @critical(loggerCRv2, "indefinite system and no trust region")
             return x, p
         end
 
@@ -59,11 +59,11 @@ function CRv2(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax
 
             # find t1 > 0 and t2 < 0 such that ‖x + ti * p‖² = Δ²  (i = 1, 2)
             xNorm² = xNorm^2
-            @debug(loggerCR, @sprintf("Δ = %8.1e > 0 and ‖x‖² = %8.1e", Δ, xNorm²))
+            @debug(loggerCRv2, @sprintf("Δ = %8.1e > 0 and ‖x‖² = %8.1e", Δ, xNorm²))
             t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
             t1 = maximum(t)
             t2 = minimum(t)
-            @debug(loggerCR, @sprintf("t1 = %8.1e and t2 = %8.1e", t1, t2))
+            @debug(loggerCRv2, @sprintf("t1 = %8.1e and t2 = %8.1e", t1, t2))
 
 
             # pour debugger
@@ -77,10 +77,10 @@ function CRv2(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax
 
 
             if abspAp ≤ eps() * norm(p) * norm(q) # p'Ap ≃ 0
-                @debug(loggerCR, @sprintf("p'Ap = %8.1e ≃ 0", pAp))
+                @debug(loggerCRv2, @sprintf("p'Ap = %8.1e ≃ 0", pAp))
                 # according to Fong and Saunders, p'r = 0 can only happen if pAp ≤ 0
                 if abspr ≤ eps() * norm(p) * rNorm # p'r ≃ 0
-                    @debug(loggerCR, @sprintf("p'r = %8.1e ≃ 0, redefining p := r", pr))
+                    @debug(loggerCRv2, @sprintf("p'r = %8.1e ≃ 0, redefining p := r", pr))
 
                     p = r # - ∇q(x)
                     # q(x + αr) = q(x) - α ‖r‖² + ½ α² r'Ar
@@ -98,7 +98,7 @@ function CRv2(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax
                     t1 = maximum(t)
 
                     if ρ > 0  # case 1
-                        @debug(loggerCR,
+                        @debug(loggerCRv2,
                                @sprintf("quadratic is convex in direction r, curv = %8.1e", ρ))
 
                         α = rNorm² / ρ
@@ -110,7 +110,7 @@ function CRv2(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax
                         solved = true
 
                     else  # case 2
-                        @debug(loggerCR,
+                        @debug(loggerCRv2,
                                @sprintf("r is a direction of nonpositive curvature: %8.1e", ρ))
 
                         α = t1
@@ -123,27 +123,27 @@ function CRv2(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax
                     end
                     dif = -α * pr + tr * rNorm² - 0.5 * (tr)^2 * ρ #pAp = 0
                     if dif > 0
-                        @debug(loggerCR, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
-                        @debug(loggerCR, "redefining p := r")
+                        @debug(loggerCRv2, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
+                        @debug(loggerCRv2, "redefining p := r")
                         p = r
                         q = s # = Ar = Ap
                         descent = true
                         α = tr
                     else
-                        @debug(loggerCR, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
+                        @debug(loggerCRv2, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
                     end
                     on_boundary = true
                 end
 
             elseif pAp > 0 && ρ > 0
-                @debug(loggerCR, @sprintf("positive curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e", pAp, ρ))
+                @debug(loggerCRv2, @sprintf("positive curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e", pAp, ρ))
                 if α ≥ t1
                     α = t1
                     on_boundary = true
                 end
 
             elseif pAp > 0 && ρ < 0
-                @debug(loggerCR, @sprintf("p'Ap = %8.1e > 0 and r'Ar = %8.1e < 0", pAp, ρ))
+                @debug(loggerCRv2, @sprintf("p'Ap = %8.1e > 0 and r'Ar = %8.1e < 0", pAp, ρ))
                 # q_p = q(x + α_p * p) - q(x) = -α_p * r'p + ½ (α_p)² * p'Ap
                 # q_r = q(x + α_r * r) - q(x) = -α_r * ‖r‖² + ½ (α_r)² * r'Ar
                 # q_p is minimal for α_p = rᵀp / pᵀAp
@@ -158,50 +158,50 @@ function CRv2(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax
                 dif = -α * pr + tr * rNorm² + 0.5 * (α^2 * pAp - (tr)^2 * ρ)
 
                 if dif > 0
-                    @debug(loggerCR, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
-                    @debug(loggerCR, "redefining p := r")
+                    @debug(loggerCRv2, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
+                    @debug(loggerCRv2, "redefining p := r")
                     p = r
                     q = s # = Ar = Ap
                     descent = true
                     α = tr
                 else
-                    @debug(loggerCR, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
+                    @debug(loggerCRv2, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
                 end
                 on_boundary = true
 
             elseif pAp < 0 && ρ > 0
-                @debug(loggerCR, @sprintf("p'Ap = %8.1e < 0 and r'Ar = %8.1e > 0", pAp, ρ))
+                @debug(loggerCRv2, @sprintf("p'Ap = %8.1e < 0 and r'Ar = %8.1e > 0", pAp, ρ))
                 # pAp < 0 => the minimum of q along p is on the on the boundary
                 α = descent ? t1 : t2
                 tr = min(tr, rNorm² / ρ)
                 dif = -α * pr + tr * rNorm² + 0.5 * (α^2 * pAp - (tr)^2 * ρ)
 
                 if dif > 0
-                    @debug(loggerCR, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
-                    @debug(loggerCR, "redefining p := r")
+                    @debug(loggerCRv2, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
+                    @debug(loggerCRv2, "redefining p := r")
                     p = r
                     q = s # = Ar = Ap
                     descent = true
                     α = tr
                 else
-                    @debug(loggerCR, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
+                    @debug(loggerCRv2, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
                 end
                 on_boundary = true
 
             elseif pAp < 0 && ρ < 0
-                @debug(loggerCR, @sprintf("negative curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e ", pAp, ρ))
+                @debug(loggerCRv2, @sprintf("negative curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e ", pAp, ρ))
                 α = descent ?  t1 : t2
                 dif = -α * pr + tr * rNorm² + 0.5 * (α^2 * pAp - (tr)^2 * ρ)
 
                 if dif > 0
-                    @debug(loggerCR, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
-                    @debug(loggerCR, "redefining p := r")
+                    @debug(loggerCRv2, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
+                    @debug(loggerCRv2, "redefining p := r")
                     p = r
                     q = s # = Ar = Aps
                     descent = true
                     α = tr
                 else
-                    @debug(loggerCR, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
+                    @debug(loggerCRv2, @sprintf("direction p engenders an equal or a bigger decrease. q_p - q_r = %8.1e ≤ 0", dif))
                 end
                 on_boundary = true
 
@@ -223,7 +223,7 @@ function CRv2(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax
         rNorm = sqrt(rNorm²)
         # @printf("rNorm = %8.1e and ||r|| = %8.1e\n", rNorm, norm(r))
 
-        @info(loggerCR, @sprintf("%5d %7.1e %7.1e %9s %8.1e %8.1e %8.1e %8.1e", iter, xNorm, rNorm, mstr, pr, α, t1, t2))
+        @info(loggerCRv2, @sprintf("%5d %7.1e %7.1e %9s %8.1e %8.1e %8.1e %8.1e", iter, xNorm, rNorm, mstr, pr, α, t1, t2))
 
         solved = (rNorm <= ϵ) | on_boundary
         tired = iter >= itmax
