@@ -48,7 +48,7 @@ scosine, sinquad, sparsine, sparsqur, srosenbr, tointgss, tquartic, woods]
 n = 100
 
 function two_solvers()
-    solvers = Dict{Symbol, Function}(:CG => TRCG,:CRv2 => TRCRv2)
+    solvers = Dict{Symbol, Function}(:CRv2 => TRCRv2,:CG => TRCG)
     # solvers = Dict{Symbol, Function}(:CG => TRCG,:MINRES => TRminres)
     # solvers = Dict{Symbol, Function}(:CR => TRCR,:MINRES => TRminres)
     # solvers = Dict{Symbol, Function}(:cgls => TRCGLS,:crls => TRCRLS)
