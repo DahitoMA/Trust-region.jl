@@ -1,3 +1,3 @@
 function TRLSMR(model; args...)
-    TrustRegionLS(model, lsmr)
+    TRLS(model, lsmr)
 end
