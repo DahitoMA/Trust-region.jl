@@ -124,7 +124,7 @@ function CRv2(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax
                     dif = -α * pr + tr * rNorm² - 0.5 * (tr)^2 * ρ #pAp = 0
                     if dif > 0
                         @debug(loggerCRv2, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
-                        @debug(loggerCRv2, "redefining p := r")
+                        @debug(loggerCRv2, "redefining p <- r")
                         p = r
                         q = s # = Ar = Ap
                         descent = true
