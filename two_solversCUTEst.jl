@@ -1,7 +1,6 @@
 using Optimize
 using CUTEst
 using Krylov
-using OptimizationProblems
 
 # CUTEst problems
 Problems = open(readlines, "Problems.txt")
