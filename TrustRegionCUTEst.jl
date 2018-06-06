@@ -92,6 +92,6 @@ function TrustRegionCUTEst(model, algo; filename::String=string("result", string
     fx0 = @sprintf("%8.3e", fx0)
     normg = @sprintf("%7.1e", normg)
     normg0 = @sprintf("%7.1e", normg0)
-    return [model.meta.name n fx fx0 normg normg0 neval_obj(model) neval_grad(model) neval_hprod(model) k (length(ite)-length(vs_ite)) length(vs_ite) (k-length(ite))] # for CUTEst problems
+    return [model.meta.name n fx fx0 normg normg0 neval_obj(model) neval_grad(model) neval_hprod(model) k (length(ite)-length(vs_ite)) length(vs_ite) (k-length(ite)) optimal] # for CUTEst problems
 
 end

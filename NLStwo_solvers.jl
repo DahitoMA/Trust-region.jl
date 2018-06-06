@@ -1,23 +1,30 @@
-using Optimize
 using Krylov
 using NLSProblems
 
 # NLSProblems without mgh11
-Problems = [mgh01, mgh02, mgh03,mgh04, mgh05, mgh06, mgh07, mgh08, mgh09,
+Problems = [LVcon501, LVcon502, LVcon503, LVcon504, LVcon511, LVcon512,
+LVcon513, LVcon514, LVcon515, LVcon516, LVcon517, LVcon518, NZF1,
+hs01, hs02, hs06, hs13, hs14, hs16, hs17, hs18, hs20, hs21, hs22,
+hs23, hs25, hs26, hs27, hs28, hs30, hs31, hs32, hs42, hs43, hs46, hs48, hs49,
+hs50, hs51, hs52, hs53, hs57, hs60, hs61, hs65, hs77, hs79,
+mgh01, mgh02, mgh03,mgh04, mgh05, mgh06, mgh07, mgh08, mgh09,
 mgh10, mgh12, mgh13, mgh14, mgh15, mgh16, mgh17, mgh18, mgh19,
 mgh20, mgh21, mgh22, mgh23, mgh24, mgh25, mgh26, mgh27, mgh28, mgh29,
 mgh30, mgh31, mgh32, mgh33, mgh34, mgh35]
 
 function NLStwo_solvers() #for NLSProblems
-    solvers = Dict{String, Function}("cgls" => TRCGLS,"crls" => TRCRLS)
-    stats = Dict{String, Any}("cgls" => ["#r" "#Av" "A'v"], "crls" => ["#r" "#Av" "A'v"])
-    # solvers = Dict{String, Function}("lsqr" => TRLSQR,"lsmr" => TRLSMR)
-    # stats = Dict{String, Any}("lsqr" => ["#r" "#Av" "A'v"], "lsmr" => ["#r" "#Av" "A'v"])
+    # solvers = Dict{String, Function}("cgls" => TRCGLS,"crls" => TRCRLS)
+    # stats = Dict{String, Any}("cgls" => ["#r" "#Av" "#A'v"], "crls" => ["#r" "#Av" "#A'v"])
+    # solvers = Dict{String, Function}("cgls" => TRCGLS,"lsmr" => TRLSMR)
+    # stats = Dict{String, Any}("cgls" => ["#r" "#Av" "#A'v"], "lsmr" => ["#r" "#Av" "#A'v"])
+    solvers = Dict{String, Function}("LSQR" => TRLSQR,"LSMR" => TRLSMR)
+    stats = Dict{String, Any}("LSQR" => ["#r" "#Av" "#A'v"], "LSMR" => ["#r" "#Av" "#A'v"])
     for (name, solver) in solvers
         for p in Problems
-            model = ADNLSModel(p())
-            stat = solver(model)
-            stats[name] = vcat(values(stats[name]), stat)
+            model = p()
+            T = solver(model)
+            stat = T[15] ? T[8:10] : -T[8:10] # T[15] = optimal
+            stats[name] = vcat(values(stats[name]), stat')
             reset!(model)
         end
     end
@@ -25,37 +32,40 @@ function NLStwo_solvers() #for NLSProblems
 end
 
 stats = NLStwo_solvers()
-tf = font(17) # titlefont
-f = font(15)
+tf = font(13) # titlefont
+f = font(12)
 pb_type = "NLSProblems"
-algo_used = "cgls and crls"
-# algo_used = "lsqr and lsmr"
+algo_used = "LSQR and LSMR"
 
 p = performance_profile(hcat([p[2:end, 1] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
                             title=string("Performance profile : #r in the resolution of ", pb_type, " with ", algo_used),
-                            titlefont = tf, legendfont = f, guidefont = f, size = (800,800)) # Profile for #r
+                            titlefont = tf, legendfont = f, guidefont = f, size = (800,800), legend=:bottomright) # Profile for #r
 
-# savefig(p, string("profil_r_", pb_type, ".pdf"))
-#
-# p = performance_profile(hcat([p[2:end, 2] for p in values(stats)]...),
-#                             collect(String, [string(s) for s in keys(stats)]),
-#                             title=string("Performance profile : #Av in the resolution of ", pb_type, " with ", algo_used),
-#                             titlefont = tf, legendfont = f, guidefont = f, size = (800,800)) # Profile for #Av
-#
-# savefig(p, string("profil_Av_", pb_type, ".pdf"))
-#
-#
-# p = performance_profile(hcat([p[2:end, 3] for p in values(stats)]...),
-#                             collect(String, [string(s) for s in keys(stats)]),
-#                             title=string("Performance profile : #A'v in the resolution of ", pb_type, " with ", algo_used),
-#                             titlefont = tf, legendfont = f, guidefont = f, size = (800,800)) # Profile for #A'v
-#
-# Plots.savefig(p, string("profil_A'v_", pb_type, ".pdf"))
-#
+savefig(p, string("profil_r_lsqr_", pb_type, ".pdf"))
+
+p = performance_profile(hcat([p[2:end, 2] for p in values(stats)]...),
+                            collect(String, [string(s) for s in keys(stats)]),
+                            title=string("Performance profile : #Av in the resolution of ", pb_type, " with ", algo_used),
+                            titlefont = tf, legendfont = f, guidefont = f, size = (800,800), legend=:bottomright) # Profile for #Av
+
+savefig(p, string("profil_Av_lsqr_", pb_type, ".pdf"))
+
+
+p = performance_profile(hcat([p[2:end, 3] for p in values(stats)]...),
+                            collect(String, [string(s) for s in keys(stats)]),
+                            title=string("Performance profile : #A'v in the resolution of ", pb_type, " with ", algo_used),
+                            titlefont = tf, legendfont = f, guidefont = f, size = (800,800), legend=:bottomright) # Profile for #A'v
+
+Plots.savefig(p, string("profil_A'v_lsqr_", pb_type, ".pdf"))
+
 # p = performance_profile(hcat([sum(p[2:end,:], 2) for p in values(stats)]...),
 #                             collect(String, [string(s) for s in keys(stats)]),
-#                             title=string("Performance profile : #r + #Av + A'v in the resolution of ", pb_type, " with ", algo_used),
-#                             titlefont = tf, legendfont = f, guidefont = f, size = (800,800)) # Profile for #r + #Av + #A'v
-#
-# savefig(p, string("profil_r+Av+A'v_", pb_type, ".pdf"))
+#                             title=string("Performance profile : #r + #Av + #A'v in the resolution of ", pb_type, " with ", algo_used),
+#                             titlefont = tf, legendfont = f, guidefont = f, size = (800,800), legend=:bottomright) # Profile for #r + #Av + #A'v
+p = performance_profile(hcat([p[2:end, 1]+p[2:end, 2]+p[2:end, 3] for p in values(stats)]...),
+                            collect(String, [string(s) for s in keys(stats)]),
+                            title=string("Performance profile : #r + #Av + #A'v in the resolution of ", pb_type, " with ", algo_used),
+                            titlefont = tf, legendfont = f, guidefont = f, size = (800,800), legend=:bottomright) # Profile for #r + #Av + #A'v
+
+savefig(p, string("profil_r+Av+A'v_lsqr_", pb_type, ".pdf"))

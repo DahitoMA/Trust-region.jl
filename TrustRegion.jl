@@ -5,7 +5,7 @@
 
 """An implementation of the trust-region method
 """
-function TrustRegion(model, algo; filename::String=string("result", string(algo)), Δ::Float64=10., ϵa::Float64=1e-6, ϵr::Float64=1e-6, itemax::Int=10000)
+function TrustRegion(model, algo; profil::Bool=false, filename::String=string("result", string(algo)), Δ::Float64=10., ϵa::Float64=1e-6, ϵr::Float64=1e-6, itemax::Int=10000)
 
     @info(loggerTR, @sprintf("TrustRegion: resolution of %s using %s, initial radius = %8.1e", model.meta.name, string(algo), Δ))
     x = model.meta.x0 # initial estimation from the model
@@ -88,12 +88,15 @@ function TrustRegion(model, algo; filename::String=string("result", string(algo)
     tired = k ≥ itemax
     status = optimal ? "optimal" : "tired"
 
-    # return x, fx, normg, k, optimal, tired, status # for use of two_solvers()
-    fx = @sprintf("%8.3e", fx)
-    fx0 = @sprintf("%8.3e", fx0)
-    normg = @sprintf("%7.1e", normg)
-    normg0 = @sprintf("%7.1e", normg0)
-    return [model.meta.name[22:end] n fx fx0 normg normg0 neval_obj(model) neval_grad(model) neval_hprod(model) k (length(ite)-length(vs_ite)) length(vs_ite) (k-length(ite))] # for OptimizationProblems
-    # return [model.meta.name, n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite)] # for CUTEst problems
+    if profil
+        return x, fx, normg, k, optimal, tired, status # for use of two_solvers()
+    else
+        fx = @sprintf("%8.3e", fx)
+        fx0 = @sprintf("%8.3e", fx0)
+        normg = @sprintf("%7.1e", normg)
+        normg0 = @sprintf("%7.1e", normg0)
+        return [model.meta.name[22:end] n fx fx0 normg normg0 neval_obj(model) neval_grad(model) neval_hprod(model) k (length(ite)-length(vs_ite)) length(vs_ite) (k-length(ite))] # for OptimizationProblems
+        # return [model.meta.name, n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite)] # for CUTEst problems
+    end
 
 end
