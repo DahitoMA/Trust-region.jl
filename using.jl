@@ -10,8 +10,7 @@ using MiniLogging
 
 # basic configuration. The root logger level is then INFO
 basic_config(MiniLogging.INFO; date_format="%Y-%m-%d %H:%M:%S")
-loggerCRv2 = get_logger("CRv2")
-loggerCRmaster = get_logger("CRmaster")
+loggerCR = get_logger("CR")
 loggerCG = get_logger("CG")
 # loggerminres = get_logger("minres")
 loggerTR = get_logger("TrustRegion")
@@ -37,15 +36,13 @@ loggerCG.level = MiniLogging.ERROR
 # loggerTRLS.level = MiniLogging.ERROR
 
 include("CG.jl")
-include("CRv2.jl")
-include("CRmaster.jl")
+include("CR.jl")
 # include("minres.jl")
 include("TrustRegion.jl")
 # include("TrustRegionCUTEst.jl")
 # include("TrustRegion_two_solvers.jl")
 # include("TrustRegionLS.jl")
-include("TRCRv2.jl")
-include("TRCRmaster.jl")
+include("TRCR.jl")
 include("TRCG.jl")
 # include("TRCG_CUTEst.jl")
 # include("TRCR_CUTEst.jl")
