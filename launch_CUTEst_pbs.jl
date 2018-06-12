@@ -1,4 +1,9 @@
+using NLPModels
 using CUTEst
+include("TrustRegionCUTEst.jl")
+include("CG.jl")
+include("CR.jl")
+
 # using Optimize
 
 # Problems = open(readlines, "cutest_unc.lst")
@@ -18,7 +23,6 @@ using CUTEst
 
 num = parse(Int64,ARGS[1])
 Problems = open(readlines, "Problems.txt")
-Problems = deleteat!(Problems,56) # pb "INDEF" not treated
 Algos = [CG, CR]
 
 D = ["model     algo nvar   f(x)    f(x0)   ‖g(x)‖  ‖g(x0)‖   #f  #g  #Hv  #it #s_it #vs_it #rej_it optimal"]
@@ -28,7 +32,7 @@ problem = Problems[num]
 model = CUTEstModel(problem)
 for algo in Algos
     T = TrustRegionCUTEst(model, algo)
-    S = @sprintf("%5s %5s %4d %8.1e %8.1e %7.1e %7.1e %4d %4d %4d %4d %4d %4d %4d %5s", T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9], T[10], T[11], T[12], T[13], T[14], T[15])
+    S = @sprintf("%5s %5s %4d %5s %5s %5s %5s %4d %4d %4d %4d %4d %4d %4d %5s", T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9], T[10], T[11], T[12], T[13], T[14], T[15])
     # @info(loggerCUTEst, S)
     D = vcat(D, S)
     reset!(model)
