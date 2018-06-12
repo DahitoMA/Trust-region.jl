@@ -1,4 +1,4 @@
-loggerCRimport Krylov
+import Krylov
 
 # A truncated version of Stiefel’s Conjugate Residual method
 # CR(A, b, Δ, itmax; quad) solves the linear system 'A * x = b' or the least-squares problem :
@@ -64,17 +64,13 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
             t1 = maximum(t)
             t2 = minimum(t)
             @debug(loggerCR, @sprintf("t1 = %8.1e and t2 = %8.1e", t1, t2))
+            t = Krylov.to_boundary(x, r, Δ; flip = false, xNorm2 = xNorm²)
+            tr = maximum(t)
 
 
             # pour debugger
             @assert t1 > 0
             @assert t2 < 0
-
-            if ! (pAp > 0 && ρ > 0)
-                t = Krylov.to_boundary(x, r, Δ; flip = false, xNorm2 = xNorm²)
-                tr = maximum(t)
-            end
-
 
             if abspAp ≤ eps() * norm(p) * norm(q) # p'Ap ≃ 0
                 @debug(loggerCR, @sprintf("p'Ap = %8.1e ≃ 0", pAp))
@@ -99,7 +95,7 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
 
                     if ρ > 0  # case 1
                         @debug(loggerCR,
-                               @sprintf("quadratic is convex in direction r, curv = %8.1e", ρ))
+                                @sprintf("quadratic is convex in direction r, curv = %8.1e", ρ))
 
                         α = rNorm² / ρ
 
@@ -111,7 +107,7 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
 
                     else  # case 2
                         @debug(loggerCR,
-                               @sprintf("r is a direction of nonpositive curvature: %8.1e", ρ))
+                                @sprintf("r is a direction of nonpositive curvature: %8.1e", ρ))
 
                         α = t1
                         on_boundary = true
@@ -211,6 +207,7 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
 
         x = x + α * p
         xNorm = norm(x, 2)
+        xNorm ≈ Δ && (on_boundary = true)
         push!(xNorms, xNorm)
         if quad
             m = -dot(b, x) + 0.5 * dot(x, A * x)
@@ -223,7 +220,7 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
 
         @info(loggerCR, @sprintf("%5d %7.1e %7.1e %9s %8.1e %8.1e %8.1e %8.1e", iter, xNorm, rNorm, mstr, pr, α, t1, t2))
 
-        solved = (rNorm <= ϵ) | on_boundary
+        solved = (rNorm <= ϵ) || on_boundary
         tired = iter >= itmax
         (solved || tired) && continue
 
