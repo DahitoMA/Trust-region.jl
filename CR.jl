@@ -60,22 +60,21 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
             # find t1 > 0 and t2 < 0 such that ‖x + ti * p‖² = Δ²  (i = 1, 2)
             xNorm² = xNorm^2
             @debug(loggerCR, @sprintf("Δ = %8.1e > 0 and ‖x‖² = %8.1e", Δ, xNorm²))
-            t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
+            pNorm = norm(p)
+            t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm², dNorm = pNorm)
             t1 = maximum(t)
             t2 = minimum(t)
-            @debug(loggerCR, @sprintf("t1 = %8.1e and t2 = %8.1e", t1, t2))
-            t = Krylov.to_boundary(x, r, Δ; flip = false, xNorm2 = xNorm²)
-            tr = maximum(t)
-
+            tr = maximum(Krylov.to_boundary(x, r, Δ; flip = false, xNorm2 = xNorm², dNorm = rNorm))
+            @debug(loggerCR, @sprintf("t1 = %8.1e, t2 = %8.1e and tr = %8.1e", t1, t2, tr))
 
             # pour debugger
             @assert t1 > 0
             @assert t2 < 0
 
-            if abspAp ≤ eps() * norm(p) * norm(q) # p'Ap ≃ 0
+            if abspAp ≤ eps() * pNorm * norm(q) # p'Ap ≃ 0
                 @debug(loggerCR, @sprintf("p'Ap = %8.1e ≃ 0", pAp))
                 # according to Fong and Saunders, p'r = 0 can only happen if pAp ≤ 0
-                if abspr ≤ eps() * norm(p) * rNorm # p'r ≃ 0
+                if abspr ≤ eps() * pNorm * rNorm # p'r ≃ 0
                     @debug(loggerCR, @sprintf("p'r = %8.1e ≃ 0, redefining p := r", pr))
 
                     p = r # - ∇q(x)
@@ -89,18 +88,14 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
                     pr = abspr = rNorm²
                     descent = true
 
-                    # TODO: find a way to not recompute t1 and t2
-                    t = Krylov.to_boundary(x, p, Δ; flip = false, xNorm2 = xNorm²)
-                    t1 = maximum(t)
-
                     if ρ > 0  # case 1
                         @debug(loggerCR,
                                 @sprintf("quadratic is convex in direction r, curv = %8.1e", ρ))
 
                         α = rNorm² / ρ
 
-                        if α ≥ t1
-                            α = t1
+                        if α ≥ tr
+                            α = tr
                             on_boundary = true
                         end
                         solved = true
@@ -109,14 +104,12 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
                         @debug(loggerCR,
                                 @sprintf("r is a direction of nonpositive curvature: %8.1e", ρ))
 
-                        α = t1
+                        α = tr
                         on_boundary = true
                     end
                 else
                     α = descent ?  t1 : t2
-                    if ρ > 0
-                        tr = min(tr, rNorm² / ρ)
-                    end
+                    ρ > 0 && (tr = min(tr, rNorm² / ρ))
                     dif = -α * pr + tr * rNorm² - 0.5 * (tr)^2 * ρ #pAp = 0
                     if dif > 0
                         @debug(loggerCR, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))

@@ -4,6 +4,7 @@
 using NLPModels
 using LinearOperators
 using Plots # graph
+Plots.pyplot()
 using BenchmarkTools
 using BenchmarkProfiles
 using MiniLogging
@@ -26,8 +27,7 @@ loggerind = get_logger("launch_ind_pbs")
 loggercvx = get_logger("launch_cvx_pbs")
 # loggerNLS = get_logger("NLSProblems")
 
-loggerCRv2.level = MiniLogging.ERROR
-loggerCRmaster.level = MiniLogging.ERROR
+
 loggerTR.level = MiniLogging.ERROR
 # loggerTRCUTEst.level = MiniLogging.ERROR
 # loggerTRts.level = MiniLogging.ERROR

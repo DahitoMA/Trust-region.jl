@@ -41,22 +41,11 @@ scosine, sinquad, sparsine, sparsqur, srosenbr, tointgss, tquartic, woods]
 # arglina, arglinb, arglinc, arwhead, bdqrtic, brownden, cliff, clplatea, clplateb, clplatec, dixon3dq, dqdrtic, dqrtic, engval1, nasty, nondquar,
 # palmer1c, palmer1d, palmer2c, palmer3c, palmer4c, palmer5c, palmer5d, palmer6c, palmer7c, palmer8c, power, quartc, tridia, vardim]
 
-# CUTEst problems
-# Problems = open(readlines, "Problems.txt")
-# Problems = deleteat!(Problems,56)
-
 n = 100
 
 function two_solvers()
     solvers = Dict{Symbol, Function}(:CR => TRCR,:CG => TRCG)
-    # solvers = Dict{Symbol, Function}(:CG => TRCG,:MINRES => TRminres)
-    # solvers = Dict{Symbol, Function}(:CR => TRCR,:MINRES => TRminres)
-    # solvers = Dict{Symbol, Function}(:cgls => TRCGLS,:crls => TRCRLS)
     bmark_args = Dict{Symbol, Any}(:skipif => model -> !unconstrained(model))
-
-    # bmark_solvers(solvers,
-    #             (CUTEstModel(p) for p in Problems);
-    #             bmark_args...) # for CUTEst problems
 
     bmark_solvers(solvers,
                 (MathProgNLPModel(p(n), name=string(p)) for p in Problems);
@@ -68,7 +57,6 @@ end
 stats = two_solvers()
 tf = font(13) # titlefont
 f = font(12)
-# pb_type = "CUTEst problems"
 pb_type = "non-convex problems"
 algo_used = "CG and CR"
 p = performance_profile(hcat([p[:, 1] for p in values(stats)]...),

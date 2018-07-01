@@ -98,5 +98,5 @@ function TrustRegionLS(lsmodel, algo; filename::String=string("result", string(a
     tired = k ≥ itemax
     status = optimal ? "optimal" : "tired"
 
-    return [lsmodel.meta.name, string(algo)[8:end], n, fx, fx0, normg, normg0, neval_residual(lsmodel), neval_jprod_residual(lsmodel), neval_jtprod_residual(lsmodel), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite)] # for Least-squares problems
+    return [lsmodel.meta.name, string(algo)[8:end], n, fx, fx0, normg, normg0, neval_residual(lsmodel), neval_jprod_residual(lsmodel), neval_jtprod_residual(lsmodel), k, length(ite)-length(vs_ite), length(vs_ite), k-length(ite), optimal] # for Least-squares problems
 end

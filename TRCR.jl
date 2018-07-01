@@ -1,3 +1,3 @@
 function TRCR(model; args...)
-    TrustRegion(model, CR)
+    TrustRegion(model, CR, profil=true)
 end
