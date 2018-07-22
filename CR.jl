@@ -7,7 +7,7 @@ import Krylov
 """A truncated version of Stiefel’s Conjugate Residual method to solve the symmetric linear system Ax=b.
 If quad = true, the values of the quadratic model are computed.
 """
-function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0; quad::Bool=false)
+function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0, ε::Float64=1e-6; quad::Bool=false)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
     @info(loggerCR, @sprintf("CR: system of %d equations in %d variables", n, n))
@@ -71,10 +71,10 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
             @assert t1 > 0
             @assert t2 < 0
 
-            if abspAp ≤ eps() * pNorm * norm(q) # p'Ap ≃ 0
+            if abspAp ≤ ε * pNorm * norm(q) # p'Ap ≃ 0
                 @debug(loggerCR, @sprintf("p'Ap = %8.1e ≃ 0", pAp))
                 # according to Fong and Saunders, p'r = 0 can only happen if pAp ≤ 0
-                if abspr ≤ eps() * pNorm * rNorm # p'r ≃ 0
+                if abspr ≤ ε * pNorm * rNorm # p'r ≃ 0
                     @debug(loggerCR, @sprintf("p'r = %8.1e ≃ 0, redefining p := r", pr))
 
                     p = r # - ∇q(x)
