@@ -7,7 +7,7 @@ import Krylov
 If quad = true, the values of the quadratic model are computed.
 A can be positive definite or not.
 """
-function CG(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0; quad::Bool=false)
+function CG(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::Int=0, ε::Float64=1e-6; quad::Bool=false)
     n = size(b, 1) # size of the problem
     (size(A, 1) == n & size(A, 2) == n) || error("Inconsistent problem size")
     @info(loggerCG, @sprintf("CG: system of %d equations in %d variables", n, n))
@@ -58,7 +58,7 @@ function CG(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
 
             # if the model is not convexe or x is out of the trust region,
             # d is followed until the edge of the trust region
-            if dAd ≤ 0 || α ≥ t1
+            if dAd ≤ ε * norm(d) * norm(Ad) || α ≥ t1
                 @debug(loggerCG, @sprintf("non positive curvature dAd = %8.1e or α = %8.1e ≥ t1 = %8.1e", dAd, α, t1))
                 α = t1
                 on_boundary = true
