@@ -1,7 +1,7 @@
 using Krylov
 
-ACG = readdlm("TRPbs/AllPbsCG.txt")
-ACR = readdlm("TRPbs/AllPbsCR.txt")
+ACG = readdlm("NewResults_TR/AllPbsCG.txt")
+ACR = readdlm("NewResults_TR/AllPbsCR.txt")
 Problems = ACG[2:end,1]
 
 function perfprofile()

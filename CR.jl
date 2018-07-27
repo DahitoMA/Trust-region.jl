@@ -48,7 +48,6 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
 
     while ! (solved || tired)
         iter += 1
-        α = ρ / dot(q, q) # step
 
         if pAp ≤ 0 && Δ == 0
             @critical(loggerCR, "indefinite system and no trust region")
@@ -126,6 +125,7 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
 
             elseif pAp > 0 && ρ > 0
                 @debug(loggerCR, @sprintf("positive curvatures along p and r. p'Ap = %8.1e and r'Ar = %8.1e", pAp, ρ))
+                α = ρ / dot(q, q) # step
                 if α ≥ t1
                     α = t1
                     on_boundary = true

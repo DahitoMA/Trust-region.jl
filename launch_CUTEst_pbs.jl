@@ -1,8 +1,14 @@
 using NLPModels
 using CUTEst
+using MiniLogging
 include("TrustRegionCUTEst.jl")
 include("CG.jl")
 include("CR.jl")
+
+basic_config(MiniLogging.INFO; date_format="%Y-%m-%d %H:%M:%S")
+loggerCR = get_logger("CR")
+loggerCG = get_logger("CG")
+loggerTRCUTEst = get_logger("TrustRegionCUTEst")
 
 # using Optimize
 

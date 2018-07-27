@@ -47,8 +47,6 @@ function CG(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
             return x, d
         end
 
-        α = rNorm^2 / dAd # step for x estimation
-
         if Δ > 0
           # find t1 > 0 such that ‖x + t1 * d‖² = Δ²
             xNorm² = xNorm^2
@@ -58,10 +56,17 @@ function CG(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
 
             # if the model is not convexe or x is out of the trust region,
             # d is followed until the edge of the trust region
-            if dAd ≤ ε * norm(d) * norm(Ad) || α ≥ t1
-                @debug(loggerCG, @sprintf("non positive curvature dAd = %8.1e or α = %8.1e ≥ t1 = %8.1e", dAd, α, t1))
+            if dAd ≤ ε * norm(d) * norm(Ad)
+                @debug(loggerCG, @sprintf("non positive curvature dAd = %8.1e", dAd))
                 α = t1
                 on_boundary = true
+            else
+                α = rNorm^2 / dAd # step for x estimation
+                if α ≥ t1
+                    @debug(loggerCG, @sprintf("α = %8.1e ≥ t1 = %8.1e", α, t1))
+                    α = t1
+                    on_boundary = true
+                end
             end
 
         end

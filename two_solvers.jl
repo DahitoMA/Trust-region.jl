@@ -57,7 +57,7 @@ end
 stats = two_solvers()
 tf = font(13) # titlefont
 f = font(12)
-pb_type = "non-convex problems"
+pb_type = "nonconvex problems"
 algo_used = "CG and CR"
 p = performance_profile(hcat([p[:, 1] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),

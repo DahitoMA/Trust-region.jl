@@ -12,8 +12,8 @@ using Krylov
 # mgh20, mgh21, mgh22, mgh23, mgh24, mgh25, mgh26, mgh27, mgh28, mgh29,
 # mgh30, mgh31, mgh32, mgh33, mgh34, mgh35]
 
-ALSQR = readdlm("LSPbs/AllPbsLSQR.txt")
-ALSMR = readdlm("LSPbs/AllPbsLSMR.txt")
+ALSQR = readdlm("NewResults_LS/AllPbsLSQR.txt")
+ALSMR = readdlm("NewResults_LS/AllPbsLSMR.txt")
 Problems = ALSQR[2:end,1]
 
 function NLStwo_solvers() #for NLSProblems
@@ -51,18 +51,18 @@ p = performance_profile(hcat([p[2:end, 1] for p in values(stats)]...),
                             title=string("Performance profile : #F"),
                             titlefont = tf, legendfont = f, guidefont = f, legend=:bottomright) # Profile for #r
 
-savefig(p, string("profil_r_", pb_type, ".pdf"))
+savefig(p, string("profil_F_", pb_type, ".pdf"))
 
 p = performance_profile(hcat([p[2:end, 2]+p[2:end, 3] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
-                            title=string("Performance profile : #Jv + #Jᵀv"),
+                            title=string("Performance profile : #Ju + #Jᵀv"),
                             titlefont = tf, legendfont = f, guidefont = f, legend=:bottomright) # Profile for #Av + #A'v
 
-savefig(p, string("profil_Av+A'v_", pb_type, ".pdf"))
+savefig(p, string("profil_Ju+J'v_", pb_type, ".pdf"))
 
 p = performance_profile(hcat([p[2:end, 1]+p[2:end, 2]+p[2:end, 3] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
-                            title=string("Performance profile : #F + #Jv + #Jᵀv"),
+                            title=string("Performance profile : #F + #Ju + #Jᵀv"),
                             titlefont = tf, legendfont = f, guidefont = f, legend=:bottomright) # Profile for #r + #Av + #A'v
 
-savefig(p, string("profil_r+Av+A'v_", pb_type, ".pdf"))
+savefig(p, string("profil_F+Ju+J'v_", pb_type, ".pdf"))
