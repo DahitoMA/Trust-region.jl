@@ -49,20 +49,23 @@ algo_used = "LSQR and LSMR"
 p = performance_profile(hcat([p[2:end, 1] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
                             title=string("Performance profile : #F"),
-                            titlefont = tf, legendfont = f, guidefont = f, legend=:bottomright) # Profile for #r
-
+                            titlefont = tf, legendfont = f, guidefont = f,
+                            legend=:bottomright, palette=:blues) # Profile for #r
+Plots.xlabel!("Within this factor of the best (log₂ scale)")
 savefig(p, string("profil_F_", pb_type, ".pdf"))
 
 p = performance_profile(hcat([p[2:end, 2]+p[2:end, 3] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
                             title=string("Performance profile : #Ju + #Jᵀv"),
-                            titlefont = tf, legendfont = f, guidefont = f, legend=:bottomright) # Profile for #Av + #A'v
-
+                            titlefont = tf, legendfont = f, guidefont = f,
+                            legend=:bottomright, palette=:blues) # Profile for #Av + #A'v
+Plots.xlabel!("Within this factor of the best (log₂ scale)")
 savefig(p, string("profil_Ju+J'v_", pb_type, ".pdf"))
 
 p = performance_profile(hcat([p[2:end, 1]+p[2:end, 2]+p[2:end, 3] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
                             title=string("Performance profile : #F + #Ju + #Jᵀv"),
-                            titlefont = tf, legendfont = f, guidefont = f, legend=:bottomright) # Profile for #r + #Av + #A'v
-
+                            titlefont = tf, legendfont = f, guidefont = f,
+                            legend=:bottomright, palette=:blues) # Profile for #r + #Av + #A'v
+Plots.xlabel!("Within this factor of the best (log₂ scale)")
 savefig(p, string("profil_F+Ju+J'v_", pb_type, ".pdf"))

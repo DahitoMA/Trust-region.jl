@@ -36,28 +36,32 @@ pb_type = "nonconvex problems"
 p = performance_profile(hcat([p[:, 1] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
                             title=string("Performance profile : #f in the solution of ", pb_type),
-                            titlefont = tf, legendfont = f, guidefont = f, legend=:bottomright) # Profile for #f
-
+                            titlefont = tf, legendfont = f, guidefont = f,
+                            legend=:bottomright, palette=:blues) # Profile for #f
+Plots.xlabel!("Within this factor of the best (log₂ scale)")
 Plots.savefig(p, string("profil_f_", pb_type, ".pdf"))
 
 p = performance_profile(hcat([p[:, 2] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
                             title=string("Performance profile : #g in the solution of ", pb_type),
-                            titlefont = tf, legendfont = f, guidefont = f, legend=:bottomright) # Profile for #g
-
+                            titlefont = tf, legendfont = f, guidefont = f,
+                            legend=:bottomright, palette=:blues) # Profile for #g
+Plots.xlabel!("Within this factor of the best (log₂ scale)")
 Plots.savefig(p, string("profil_g_", pb_type, ".pdf"))
 
 
 p = performance_profile(hcat([p[:, 3] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
                             title=string("Performance profile : #Hv in the solution of ", pb_type),
-                            titlefont = tf, legendfont = f, guidefont = f, legend=:bottomright) # Profile for #Hv
-
+                            titlefont = tf, legendfont = f, guidefont = f,
+                            legend=:bottomright, palette=:blues) # Profile for #Hv
+Plots.xlabel!("Within this factor of the best (log₂ scale)")
 Plots.savefig(p, string("profil_Hv_", pb_type, ".pdf"))
 
 p = performance_profile(hcat([sum(p, 2) for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
                             title=string("Performance profile : #f + #g  + #Hv in the solution of ", pb_type),
-                            titlefont = tf, legendfont = f, guidefont = f, legend=:bottomright) # Profile for #f + #g + #Hv
-
+                            titlefont = tf, legendfont = f, guidefont = f,
+                            legend=:bottomright, palette=:blues) # Profile for #f + #g + #Hv
+Plots.xlabel!("Within this factor of the best (log₂ scale)")
 Plots.savefig(p, string("profil_f+g+Hv_", pb_type, ".pdf"))
