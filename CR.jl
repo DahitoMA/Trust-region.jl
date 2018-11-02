@@ -20,7 +20,6 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
     rNorm² = rNorm * rNorm
     s = A * r
     ρ = dot(r, s)
-    absρ = abs(ρ)
     p = r
     q = s
     if quad
@@ -34,7 +33,7 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
     pr = rNorm²
     abspr = pr
     pAp = ρ # = dot(p, q) = dot(r, s)
-    abspAp = absρ
+    abspAp = abs(pAp)
 
     iter = 0
     itmax == 0 && (itmax = 2 * n)
@@ -45,6 +44,7 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
     solved = rNorm ≤ ϵ
     tired = iter ≥ itmax
     on_boundary = false
+    npcurv = false
 
     while ! (solved || tired)
         iter += 1
@@ -77,13 +77,11 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
                     @debug(loggerCR, @sprintf("p'r = %8.1e ≃ 0, redefining p := r", pr))
 
                     p = r # - ∇q(x)
-                    # q(x + αr) = q(x) - α ‖r‖² + ½ α² r'Ar
-                    # 1) if rAr > 0, the quadratic decreases from α = 0 to α = ‖r‖² / r'Ar
-                    # 2) if rAr ≤ 0, the quadratic decreases to -∞ in the direction r
+                    # q(x + αr) = q(x) - α ‖r‖² + ½ α² rᵀAr
+                    # 1) if rᵀAr > 0, the quadratic decreases from α = 0 to α = ‖r‖² / rᵀAr
+                    # 2) if rᵀAr ≤ 0, the quadratic decreases to -∞ in the direction r
 
                     q = s # = Ar = Ap
-                    pAp = ρ # = dot(p, q) = pAp = rAr
-                    abspAp = abs(pAp)
                     pr = abspr = rNorm²
                     descent = true
 
@@ -107,9 +105,15 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
                         on_boundary = true
                     end
                 else
+                    # q_p = q(x + α_p * p) - q(x) = -α_p * r'p + ½ (α_p)² * p'Ap
+                    # q_r = q(x + α_r * r) - q(x) = -α_r * ‖r‖² + ½ (α_r)² * r'Ar
+                    # dif = q_p - q_r
+                    # if dif > 0, r is followed in the limits of the trust-region
+                    # else p is followed in the limits of the trust-region
+
                     α = descent ?  t1 : t2
                     ρ > 0 && (tr = min(tr, rNorm² / ρ))
-                    dif = -α * pr + tr * rNorm² - 0.5 * (tr)^2 * ρ #pAp = 0
+                    dif = -α * pr + tr * rNorm² - 0.5 * (tr)^2 * ρ # as pAp = 0
                     if dif > 0
                         @debug(loggerCR, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
                         @debug(loggerCR, "redefining p <- r")
@@ -138,11 +142,11 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
                 # q_p is minimal for α_p = rᵀp / pᵀAp
                 # if pᵀr>0, the condition on α_p is: 0 < α_p ≤ t1
                 # else t2 ≦ α_p < 0
-                # q_r is minimal for α_r = ‖r²‖ / rᵀHr
+                # q_r is minimal for α_r = ‖r²‖ / rᵀAr
                 # the condition on α_r is: α_r ≦ t1
                 # dif = q_p - q_r
-                # if dif > 0, r is followed until the edge of the trust-region
-                # else p is followed until the edge of the trust-region
+                # if dif > 0, r is followed in the limits of the trust-region
+                # else p is followed in the limits of the trust-region
                 α = descent ?  min(t1, pr / pAp) : max(t2, pr / pAp)
                 dif = -α * pr + tr * rNorm² + 0.5 * (α^2 * pAp - (tr)^2 * ρ)
 
@@ -160,7 +164,7 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
 
             elseif pAp < 0 && ρ > 0
                 @debug(loggerCR, @sprintf("p'Ap = %8.1e < 0 and r'Ar = %8.1e > 0", pAp, ρ))
-                # pAp < 0 => the minimum of the quadratic is along p is on the boundary
+                # pAp < 0 => the minimum of the quadratic along p is on the boundary
                 α = descent ? t1 : t2
                 tr = min(tr, rNorm² / ρ)
                 dif = -α * pr + tr * rNorm² + 0.5 * (α^2 * pAp - (tr)^2 * ρ)
@@ -186,7 +190,7 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
                     @debug(loggerCR, @sprintf("direction r engenders a bigger decrease. q_p - q_r = %8.1e > 0", dif))
                     @debug(loggerCR, "redefining p := r")
                     p = r
-                    q = s # = Ar = Aps
+                    q = s # = Ar = Ap
                     descent = true
                     α = tr
                 else
@@ -196,6 +200,8 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
 
             end
 
+        elseif Δ == 0
+            α = ρ / dot(q, q)
         end
 
         x = x + α * p
@@ -213,14 +219,13 @@ function CR(A, b, Δ::Float64=10., ϵa::Float64=1e-8, ϵr::Float64=1e-6, itmax::
 
         @info(loggerCR, @sprintf("%5d %7.1e %7.1e %9s %8.1e %8.1e %8.1e %8.1e", iter, xNorm, rNorm, mstr, pr, α, t1, t2))
 
-        solved = (rNorm <= ϵ) || on_boundary
+        solved = (rNorm <= ϵ) || on_boundary || npcurv
         tired = iter >= itmax
         (solved || tired) && continue
 
         s = A * r
         ρbar = ρ
         ρ = dot(r, s)
-        absρ = abs(ρ)
         β = ρ / ρbar # step for the direction calculus
         p = r + β * p # search direction
         q = s + β * q
