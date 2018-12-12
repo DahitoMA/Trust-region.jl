@@ -1,8 +1,8 @@
 using Krylov
 
 # convex
-# ACG = readdlm("convpbsCG.txt")
-# ACR = readdlm("convpbsCR.txt")
+# ACG = readdlm("NewResults_TR/convpbsCG.txt")
+# ACR = readdlm("NewResults_TR/convpbsCR.txt")
 
 # nonconvex
 ACG = readdlm("NewResults_TR/nonconvpbsCG.txt")
