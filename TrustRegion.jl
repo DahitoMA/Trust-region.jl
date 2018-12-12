@@ -7,8 +7,8 @@
 """
 function TrustRegion(model, algo; profil::Bool=false, filename::String=string("result", string(algo)), Δ::Float64=10., ϵa::Float64=1e-6, ϵr::Float64=1e-6, itemax::Int=10000)
 
-    @info(loggerTR, @sprintf("TrustRegion: resolution of %s using %s, initial radius = %8.1e", model.meta.name, string(algo), Δ))
-    x = model.meta.x0 # initial estimation from the model
+  MiniLogging.@info(loggerTR, @sprintf("TrustRegion: resolution of %s using %s, initial radius = %8.1e", model.meta.name, string(algo), Δ))
+  x = model.meta.x0 # initial estimation from the model
 	n = model.meta.nvar # size of the problem
 	g = grad(model, x) # ∇f(x_0)
 	H = hess_op(model, x) # ∇²f(x_0)
@@ -26,8 +26,8 @@ function TrustRegion(model, algo; profil::Bool=false, filename::String=string("r
 	vs_ite = [] # very successfull iterations
 	mvalues = [fx] # values of the quadratic model
 
-    @debug(loggerTR, @sprintf("%4s  %9s  %7s  %7s", "Iter", "f", "‖∇f‖", "Radius"))
-    @debug(loggerTR, @sprintf("%4d  %9.2e  %7.1e  %7.1e", k, fx, normg, Δ))
+    MiniLogging.@debug(loggerTR, @sprintf("%4s  %9s  %7s  %7s", "Iter", "f", "‖∇f‖", "Radius"))
+    MiniLogging.@debug(loggerTR, @sprintf("%4d  %9.2e  %7.1e  %7.1e", k, fx, normg, Δ))
 
     jldname = string(filename, ".jld")
 	txtname = string(filename, ".txt")
@@ -37,25 +37,25 @@ function TrustRegion(model, algo; profil::Bool=false, filename::String=string("r
 		s = algo(H, -g, Δ, 0., min(0.1, sqrt(normg))) # step
 		xtrial = x + s # x_k + s
 		fxtrial = obj(model, xtrial) # f(x_k + s)
-        @debug(loggerTR, @sprintf("fxtrial = %8.1e", fxtrial))
+        MiniLogging.@debug(loggerTR, @sprintf("fxtrial = %8.1e", fxtrial))
 		Δf = fxtrial - fx # f(x_k + s) - f(x_k)
-        @debug(loggerTR, @sprintf("fx = %8.1e", fx))
+        MiniLogging.@debug(loggerTR, @sprintf("fx = %8.1e", fx))
 
 		Hs = H * s
 		Δm = dot(g,s) + 0.5 * dot(s,Hs) # m_k(x_k + s) - m_k(x_k)
-        @debug(loggerTR, @sprintf("Δm = %8.1e", Δm))
+        MiniLogging.@debug(loggerTR, @sprintf("Δm = %8.1e", Δm))
         abs(Δm) < eps(Float64) && @critical(loggerTR, "Δm ≃ 0")
 
 		# ratio ρ
 		ρ = Δf / Δm
-        @debug(loggerTR, @sprintf("ratio Δf/Δq = %8.1e", ρ))
+        MiniLogging.@debug(loggerTR, @sprintf("ratio Δf/Δq = %8.1e", ρ))
 
 		# adaptation of the trust region
 		if ρ < 1.e-4
             Δ = Δ / 3
-            @debug(loggerTR, @sprintf("Δf/Δq < 1e-4, new radius = %8.1e", Δ))
+            MiniLogging.@debug(loggerTR, @sprintf("Δf/Δq < 1e-4, new radius = %8.1e", Δ))
 		else
-            @debug(loggerTR, "Δf/Δq ≥ 1e-4")
+            MiniLogging.@debug(loggerTR, "Δf/Δq ≥ 1e-4")
 			x = xtrial
 			fx = fxtrial
 			g = grad(model,x) # ∇f(x_k)
@@ -66,14 +66,14 @@ function TrustRegion(model, algo; profil::Bool=false, filename::String=string("r
 			ite = push!(ite, k)
 			if ρ >= 0.99 && ρ >= 1.e-4
 				Δ = 3 * Δ
-                @debug(loggerTR, @sprintf("Δf/Δq ≥ 0.99, new radius = %8.1e", Δ))
+                MiniLogging.@debug(loggerTR, @sprintf("Δf/Δq ≥ 0.99, new radius = %8.1e", Δ))
 				vs_ite = push!(vs_ite, k)
 			end
-            ρ < 0.99 && @debug(loggerTR, @sprintf("1e-4 ≤ Δf/Δq < 0.99, new radius = %8.1e", Δ))
+            ρ < 0.99 && MiniLogging.@debug(loggerTR, @sprintf("1e-4 ≤ Δf/Δq < 0.99, new radius = %8.1e", Δ))
 		end
 
-        @debug(loggerTR, @sprintf("%4s  %9s  %7s  %7s  %8s", "Iter", "f", "‖∇f‖", "Radius", "Ratio"))
-		@debug(loggerTR, @sprintf("%4d  %9.2e  %7.1e  %7.1e  %7.1e", k, fx, normg, Δ, ρ))
+        MiniLogging.@debug(loggerTR, @sprintf("%4s  %9s  %7s  %7s  %8s", "Iter", "f", "‖∇f‖", "Radius", "Ratio"))
+		MiniLogging.@debug(loggerTR, @sprintf("%4d  %9.2e  %7.1e  %7.1e  %7.1e", k, fx, normg, Δ, ρ))
 
 	end
 
@@ -81,8 +81,8 @@ function TrustRegion(model, algo; profil::Bool=false, filename::String=string("r
 	# X = load(jldname)
 	# writedlm(txtname,X)
 
-  	@info(loggerTR, @sprintf("%30s %s %9s %9s %9s %9s %3s %3s %4s %4s %4s %4s %4s","name", "nvar", "f(x*)", "/ f(x0)", "‖∇f(x*)‖", "/ ‖∇f(x0)‖", "#f", "#g", "#Hv", "#it", "s_it", "vs_it", "reject_it"))
-  	@info(loggerTR, @sprintf("%30s %d  %8.1e  %8.1e    %7.1e  %7.1e     %d   %d   %d    %d    %d   %d     %d", model.meta.name, n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite),length(vs_ite), k-length(ite)))
+  	MiniLogging.@info(loggerTR, @sprintf("%30s %s %9s %9s %9s %9s %3s %3s %4s %4s %4s %4s %4s","name", "nvar", "f(x*)", "/ f(x0)", "‖∇f(x*)‖", "/ ‖∇f(x0)‖", "#f", "#g", "#Hv", "#it", "s_it", "vs_it", "reject_it"))
+  	MiniLogging.@info(loggerTR, @sprintf("%30s %d  %8.1e  %8.1e    %7.1e  %7.1e     %d   %d   %d    %d    %d   %d     %d", model.meta.name, n, fx, fx0, normg, normg0, neval_obj(model), neval_grad(model), neval_hprod(model), k, length(ite)-length(vs_ite),length(vs_ite), k-length(ite)))
 
     optimal = normg ≤ ϵ
     tired = k ≥ itemax

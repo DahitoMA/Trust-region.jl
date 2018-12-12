@@ -7,7 +7,7 @@
 """
 function TrustRegionLS(lsmodel, algo; filename::String=string("result", string(algo)), Δ::Float64=10., ϵa::Float64=1e-6, ϵr::Float64=1e-6, itemax::Int=10000)#, args...)
 
-    @info(loggerTRLS, @sprintf("TrustRegionLS: resolution of %s using %s, initial radius = %8.1e", lsmodel.meta.name, string(algo), Δ))
+    MiniLogging.@info(loggerTRLS, @sprintf("TrustRegionLS: resolution of %s using %s, initial radius = %8.1e", lsmodel.meta.name, string(algo), Δ))
 
     n = lsmodel.meta.nvar # size of the problem
     x = lsmodel.meta.x0 # initial estimation from the lsmodel
@@ -31,8 +31,8 @@ function TrustRegionLS(lsmodel, algo; filename::String=string("result", string(a
     m = 0.5 * γNorm²
 	mvalues = [m] # values of the quadratic lsmodel
 
-    @debug(loggerTRLS, @sprintf("%4s  %9s  %7s  %7s", "Iter", "f", "‖∇f‖", "Radius"))
-    @debug(loggerTRLS, @sprintf("%4d  %9.2e  %7.1e  %7.1e", k, fx, normg, Δ))
+    MiniLogging.@debug(loggerTRLS, @sprintf("%4s  %9s  %7s  %7s", "Iter", "f", "‖∇f‖", "Radius"))
+    MiniLogging.@debug(loggerTRLS, @sprintf("%4d  %9.2e  %7.1e  %7.1e", k, fx, normg, Δ))
 
     jldname = string(filename, ".jld")
 	txtname = string(filename, ".txt")
@@ -44,25 +44,25 @@ function TrustRegionLS(lsmodel, algo; filename::String=string("result", string(a
 		xtrial = x + s # x_k + s
         rtrial = residual(lsmodel, xtrial) # F(x_k + s)
 		fxtrial =  0.5 * norm(rtrial)^2 # f(x_k + s)
-        @debug(loggerTRLS, @sprintf("fxtrial = %8.1e", fxtrial))
+        MiniLogging.@debug(loggerTRLS, @sprintf("fxtrial = %8.1e", fxtrial))
 		Δf = fxtrial - fx # f(x_k + s) - f(x_k)
-        @debug(loggerTRLS, @sprintf("Δf = %8.1e", Δf))
+        MiniLogging.@debug(loggerTRLS, @sprintf("Δf = %8.1e", Δf))
 
 		As = A * s
         Δm = 0.5 * norm(As)^2 + dot(s, g) # m_k(x_k + s) - m_k(x_k)
-        @debug(loggerTRLS, @sprintf("Δm = %8.1e", Δm))
+        MiniLogging.@debug(loggerTRLS, @sprintf("Δm = %8.1e", Δm))
         abs(Δm) < eps(Float64) && @critical(loggerTRLS, "Δm ≃ 0")
 
 		# ratio ρ
 		ρ = Δf / Δm
-        @debug(loggerTRLS, @sprintf("ratio Δf/Δq = %8.1e", ρ))
+        MiniLogging.@debug(loggerTRLS, @sprintf("ratio Δf/Δq = %8.1e", ρ))
 
 		# adaptation of the trust region
 		if ρ < 1.e-4
             Δ = Δ / 3
-            @debug(loggerTRLS, @sprintf("Δf/Δq < 1e-4, new radius = %8.1e", Δ))
+            MiniLogging.@debug(loggerTRLS, @sprintf("Δf/Δq < 1e-4, new radius = %8.1e", Δ))
 		else
-            @debug(loggerTRLS, "Δf/Δq ≥ 1e-4")
+            MiniLogging.@debug(loggerTRLS, "Δf/Δq ≥ 1e-4")
 			x = xtrial
 			fx = fxtrial
             r = rtrial
@@ -76,14 +76,14 @@ function TrustRegionLS(lsmodel, algo; filename::String=string("result", string(a
 			ite = push!(ite, k)
 			if ρ >= 0.99 && ρ >= 1.e-4
 				Δ = 3 * Δ
-                @debug(loggerTRLS, @sprintf("Δf/Δq ≥ 0.99, new radius = %8.1e", Δ))
+                MiniLogging.@debug(loggerTRLS, @sprintf("Δf/Δq ≥ 0.99, new radius = %8.1e", Δ))
 				vs_ite = push!(vs_ite, k)
 			end
-            ρ < 0.99 && @debug(loggerTRLS, @sprintf("1e-4 ≤ Δf/Δq < 0.99, new radius = %8.1e", Δ))
+            ρ < 0.99 && MiniLogging.@debug(loggerTRLS, @sprintf("1e-4 ≤ Δf/Δq < 0.99, new radius = %8.1e", Δ))
 		end
 
-        @debug(loggerTRLS, @sprintf("%4s  %9s  %7s  %7s  %8s", "Iter", "f", "‖∇f‖", "Radius", "Ratio"))
-		@debug(loggerTRLS, @sprintf("%4d  %9.2e  %7.1e  %7.1e  %7.1e", k, fx, normg, Δ, ρ))
+        MiniLogging.@debug(loggerTRLS, @sprintf("%4s  %9s  %7s  %7s  %8s", "Iter", "f", "‖∇f‖", "Radius", "Ratio"))
+		MiniLogging.@debug(loggerTRLS, @sprintf("%4d  %9.2e  %7.1e  %7.1e  %7.1e", k, fx, normg, Δ, ρ))
 
 	end
 
@@ -91,8 +91,8 @@ function TrustRegionLS(lsmodel, algo; filename::String=string("result", string(a
 	# X = load(jldname)
 	# writedlm(txtname,X)
 
-  	@info(loggerTRLS, @sprintf("%30s %s %9s %9s %9s %9s %3s %3s %3s %4s %4s %4s %4s","name", "nvar", "f(x*)", "/ f(x0)", "‖∇f(x*)‖", "/ ‖∇f(x0)‖", "#r", "#Av", "#A'v", "#it", "s_it", "vs_it", "reject_it"))
-  	@info(loggerTRLS, @sprintf("%30s %d  %8.1e  %8.1e    %7.1e  %7.1e     %d   %d   %d    %d    %d   %d     %d", lsmodel.meta.name, n, fx, fx0, normg, normg0, neval_residual(lsmodel), neval_jprod_residual(lsmodel), neval_jtprod_residual(lsmodel), k, length(ite)-length(vs_ite),length(vs_ite), k-length(ite)))
+  	MiniLogging.@info(loggerTRLS, @sprintf("%30s %s %9s %9s %9s %9s %3s %3s %3s %4s %4s %4s %4s","name", "nvar", "f(x*)", "/ f(x0)", "‖∇f(x*)‖", "/ ‖∇f(x0)‖", "#r", "#Av", "#A'v", "#it", "s_it", "vs_it", "reject_it"))
+  	MiniLogging.@info(loggerTRLS, @sprintf("%30s %d  %8.1e  %8.1e    %7.1e  %7.1e     %d   %d   %d    %d    %d   %d     %d", lsmodel.meta.name, n, fx, fx0, normg, normg0, neval_residual(lsmodel), neval_jprod_residual(lsmodel), neval_jtprod_residual(lsmodel), k, length(ite)-length(vs_ite),length(vs_ite), k-length(ite)))
 
     optimal = normg ≤ ϵ
     tired = k ≥ itemax
