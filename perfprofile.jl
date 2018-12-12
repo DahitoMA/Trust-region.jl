@@ -18,39 +18,39 @@ function perfprofile()
 end
 
 stats = perfprofile()
-tf = font(10) # titlefont
-f = font(10)
+tf = font(17)#(10) # titlefont
+f = font(17)
 pb_type = "allpbs"
 
 p = performance_profile(hcat([p[2:end, 1] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
-                            title="Performance profile : #f",
+                            title="Performance profile: #f",
                             titlefont = tf, legendfont = f, guidefont = f,
-                            legend=:bottomright, palette=:blues) # Profile for #f
-Plots.xlabel!("Within this factor of the best (log₂ scale)")
+                            legend=:bottomright, palette=:blues, w=2, style=:auto) # palette=:blues # Profile for #f
+# Plots.xlabel!("Within this factor of the best (log₂ scale)")
 savefig(p, string("profil_f_", pb_type, ".pdf"))
 
 p = performance_profile(hcat([p[2:end, 2] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
-                            title="Performance profile : #g",
+                            title="Performance profile: #g",
                             titlefont = tf, legendfont = f, guidefont = f,
-                            legend=:bottomright, palette=:blues) # Profile for #g
-Plots.xlabel!("Within this factor of the best (log₂ scale)")
+                            legend=:bottomright, palette=:blues, w=2, style=:auto) # Profile for #g
+# Plots.xlabel!("Within this factor of the best (log₂ scale)")
 savefig(p, string("profil_g_", pb_type, ".pdf"))
 
 
 p = performance_profile(hcat([p[2:end, 3] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
-                            title="Performance profile : #Hv",
+                            title="Performance profile: #Hv",
                             titlefont = tf, legendfont = f, guidefont = f,
-                            legend=:bottomright, palette=:blues) # Profile for #Hv
-Plots.xlabel!("Within this factor of the best (log₂ scale)")
+                            legend=:bottomright, palette=:blues, w=2, style=:auto) # Profile for #Hv
+# Plots.xlabel!("Within this factor of the best (log₂ scale)")
 Plots.savefig(p, string("profil_Hv_", pb_type, ".pdf"))
 
 p = performance_profile(hcat([p[2:end, 1]+p[2:end, 2]+p[2:end, 3] for p in values(stats)]...),
                             collect(String, [string(s) for s in keys(stats)]),
-                            title="Performance profile : #f + #g + #Hv",
+                            title="Performance profile: #f + #g + #Hv",
                             titlefont = tf, legendfont = f, guidefont = f,
-                            legend=:bottomright, palette=:blues) # Profile for #f + #g + #Hv
-Plots.xlabel!("Within this factor of the best (log₂ scale)")
+                            legend=:bottomright, palette=:blues, w=2, style=:auto) # Profile for #f + #g + #Hv
+# Plots.xlabel!("Within this factor of the best (log₂ scale)")
 savefig(p, string("profil_f+g+Hv_", pb_type, ".pdf"))
